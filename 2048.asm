@@ -89,6 +89,7 @@ Scanline:
     nop
     nop
     nop
+
     lda t2048,y
     sta GRP1
     lda t1024,y
@@ -96,7 +97,7 @@ Scanline:
 
     lda t512,y
     sta GRP1
-    lda t256,y
+    lda t32,y
     sta GRP0
     iny
 
@@ -113,7 +114,7 @@ Scanline:
 
 
     inx
-    cpx #90
+    cpx #60 ; LIE
     bne Scanline
 
 Overscan:
@@ -164,15 +165,15 @@ t1024:
 t512:
     .BYTE %00000000
     .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
     .BYTE %11010110
+    .BYTE %10010010
+    .BYTE %10010010
     .BYTE %10010010
     .BYTE %11010110
     .BYTE %01010100
+    .BYTE %01010100
+    .BYTE %01010100
     .BYTE %11010110
-    .BYTE %00000000
-    .BYTE %00000000
     .BYTE %00000000
     .BYTE %00000000
     .BYTE %00000000
@@ -182,11 +183,13 @@ t512:
 t256:
     .BYTE %00000000
     .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
     .BYTE %11011010
     .BYTE %01010010
+    .BYTE %01010010
+    .BYTE %01010010
     .BYTE %11011011
+    .BYTE %10001011
+    .BYTE %10001011
     .BYTE %10001011
     .BYTE %11011011
     .BYTE %00000000
@@ -194,10 +197,29 @@ t256:
     .BYTE %00000000
     .BYTE %00000000
     .BYTE %00000000
+
+t32:
+    .BYTE %00000000
+    .BYTE %00000000
+    .BYTE %11100111
+    .BYTE %00100001
+    .BYTE %00100001
+    .BYTE %00100001
+    .BYTE %11100111
+    .BYTE %00100100
+    .BYTE %00100100
+    .BYTE %00100100
+    .BYTE %11100111
+    .BYTE %00000000
+    .BYTE %00000000
+    .BYTE %00000000
     .BYTE %00000000
     .BYTE %00000000
 
-
+    ; Temp, just to clean
+    REPEAT 50
+        .BYTE %00000000
+    REPEND
 
     ORG $FFFA
 
