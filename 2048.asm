@@ -81,24 +81,24 @@ Scanline:
     nop
     nop
     nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
 
-    lda t2048,y
-    sta GRP1
     lda t1024,y
     sta GRP0
+    lda t2048,y
+    sta GRP1
+
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
 
     lda t512,y
-    sta GRP1
-    lda t32,y
     sta GRP0
+    lda t32,y
+    sta GRP1
     iny
 
     ; lda TileBitmaps,y
