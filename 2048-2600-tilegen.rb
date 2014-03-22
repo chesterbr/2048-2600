@@ -27,18 +27,6 @@ Tiles:
 .   XXXXXXXX
 
 .
-.      XX
-.      XX
-.      XX
-.      XX
-.      XX
-.      XX
-.      XX
-.      XX
-.      XX
-.
-
-.
 .    XXXXXX
 .    XXXXXX
 .        XX
