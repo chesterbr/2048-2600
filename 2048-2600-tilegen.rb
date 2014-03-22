@@ -13,8 +13,6 @@ glyphs = <<END
 ; Tiles are 8 x 11 to partially compensate for
 ; Atari's pixel ratio (approx. 1.66:1)
 
-    ALIGN 256  ; Ensure no page boundary is crossed (would mess with timings)
-
 Tiles:
 .   XXXXXXXX
 .   XXXXXXXX

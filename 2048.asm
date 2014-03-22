@@ -6,10 +6,61 @@
 ;   dasm 2048.asm -2048.bin -f3
 ;
 
+; Cell Tables
+; -----------
+;
+; We store each player's grid in a "cell table", which can contain one
+; of these values:
+;
+;   0  = empty cell
+;   1  = "1" tile
+;   2  = "2" tile
+;   3  = "4" tile
+;   4  = "8" tile
+;   ...
+;   (k = "2^(k-1)" tile)
+;   11 = "2048" tile
+;   12 = "4096" tile
+;   13 = "8192" tile
+;   255 (0xFF) = "sentinel" tile (see below)
+;
+; In theory, we'd use 16 positions in memory for a 4x4 tile grid. Moving
+; left/right would mean adding/subtracting one position and moving up/down
+; would be done by adding/subtracting 4 positions.
+;
+; However, we'd need to do complicated boundaries checking, so we'll surround
+; the grid with "sentinel" tiles That would theoretically need 20 extra tiles,
+; as depicted here (S = sentinel, . = number tile or empty cell):
+;
+;   SSSSSS
+;   S....S
+;   S....S
+;   S....S
+;   S....S
+;   SSSSSS
+;
+; But we can save some space by removing th left-side sentinels, since the
+; memory position before those will be a sentinel anyway (the previous line's
+; right-side sentinel).
+;
+; We can also cut the first and last sentinel (no movement can reach those),
+; ending with this layout (s = previous sentinel in memory will be used):
+;
+;    SSSSS
+;   s    S
+;   s    S
+;   s    S
+;   s    S
+;   sSSSS
+;
+; We'd add/subtract 5 to move up/down a line, and also would add 5 to get
+; from the cell map start to the first effective cell.
+
     PROCESSOR 6502
     INCLUDE "vcs.h"
 
-    ORG $F000
+    ORG $F000                ; We'll include the tile bitmaps at a known and
+    INCLUDE "graphics.asm"   ; aligned address, so we only calculate the LSB
 
 ;;;;;;;;;
 ;; RAM ;;
@@ -20,14 +71,36 @@ RowTileBmp2 = $82            ; bitmap that will be drawn on the current/next
 RowTileBmp3 = $84            ; row of the grid, and must be updated before
 RowTileBmp4 = $86            ; the row is drawn
 
+CellTable = $88              ; 16 cells + 13 sentinels = 29 (0x1D) bytes
+
+CellCursor = $A5 ;($88+$1D)  ; Loop counter for address of the "current" cell
+
+TempVar1 = $A6               ; General use variable
+TempVar2 = $A7               ; General use variable
+
+
 ;;;;;;;;;;;;;;;
 ;; CONSTANTS ;;
 ;;;;;;;;;;;;;;;
+
+CellEmpty    = 0         ; Special cell values (see header)
+Cell2048     = 11
+CellSentinel = 255
+
+CellGridYOffset     = 5  ; How much we +/- to move up/down a line on the grid
+
+; Some relative positions on the grid
+; bottom-right = Top-Left + 3 rows down + 3 columns right
+; add another row down and you have the last sentinel
+FirstDataCellOffset = 5
+LastDataCellOffset  = FirstDataCellOffset + (CellGridYOffset * 3) + 3
+LastCellOffset      = LastDataCellOffset + CellGridYOffset
 
 GridColor = $12
 TileColor = $EC
 
 TileHeight = 11          ; Tiles have 11 scanlines (and are in graphics.asm)
+GridSeparatorHeight = 10
 
 GridPF0 = $00            ; Grid sides are always clear, minus last bit
 GridPF1 = $01
@@ -50,9 +123,9 @@ CleanStack:
     pha
     bne CleanStack
 
-;;;;;;;;;;;;;;;;;;;
-;; GENERAL SETUP ;;
-;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+;; TIA SETUP ;;
+;;;;;;;;;;;;;;;
 
     lda #%00000001      ; Playfield (grid) in mirror (symmetrical) mode
     sta CTRLPF
@@ -75,19 +148,37 @@ InitialValues:
 ;; GRID PREPARATION ;;
 ;;;;;;;;;;;;;;;;;;;;;;
 
-PosGrid SET RowTileBmp1
-TileAddr SET Tiles + (11*11)
-    REPEAT 5
-    lda #<TileAddr
-    sta PosGrid
-PosGrid SET PosGrid + 1
-    lda #>TileAddr
-    sta PosGrid
-PosGrid SET PosGrid + 1
-TileAddr SET TileAddr + TileHeight
-    REPEND
+; Pre-fill the tile bitmap MSBS, so we only have to
+; figure out the LSBs for each tile
+    lda #>Tiles
+    ldx #7
+FillMsbLoop:
+    sta RowTileBmp1,x
+    dex
+    dex
+    bpl FillMsbLoop
 
+; Initialize the cell table with sentinels, then fill
+; the interior with empty cells
+    ldx #LastCellOffset
+    lda #CellSentinel
+InitCellTableLoop1:
+    sta CellTable,x
+    dex
+    bpl InitCellTableLoop1
 
+    ldx #LastDataCellOffset       ; Last non-sentinel cell offset
+    lda #CellEmpty
+InitCellTableLoop2Outer:
+    ldy #4                        ; We'll clean 4 cells at a time
+InitCellTableLoop2Inner:
+    sta CellTable,x
+    dex
+    dey
+    bne InitCellTableLoop2Inner
+    dex                           ; skip 1 cell (side sentinel)
+    cpx #FirstDataCellOffset
+    bcs InitCellTableLoop2Outer   ; and continue until we pass the top-left cell
 
 StartFrame:
     lda #%00000010
@@ -110,21 +201,27 @@ VBlank:
     stx VBLANK
     sta WSYNC
 
-;;;;;;;;;;;;;;;;;;;;;;;;
-;; GRID TOP SEPARATOR ;;
-;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;
+;; GRID SETUP ;;
+;;;;;;;;;;;;;;;;
 
-; Top separator scanline 1:
+; Separator scanline 1:
 ; configure grid playfield
     lda #GridPF0
     sta PF0
     lda #GridPF1
     sta PF1
-    lda #GridPF2Space
+    lda #GridPF2Space        ; Space between rows
     sta PF2
+
+; point cell cursor to the first data cell
+    lda #FirstDataCellOffset
+    sta CellCursor
+
     sta WSYNC
 
-; Top separator scanlines 2 and 3:
+
+; Separator scanlines 2 and 3:
 ; player graphics duplicated and positioned like this: P0 P1 P0 P1
 
     lda #$02    ; (2)        ; Duplicate the players (with some space between)
@@ -148,22 +245,62 @@ VBlank:
     sta HMOVE
     sta WSYNC
 
-; Top separator scanline 4 (last one)
-    ldy #TileHeight-1          ; Initialize tile scanline counter
-                               ; (goes downwards and is zero-based)
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; GRID ROW PREPARATION ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    REPEAT 20    ; (60 = 20x3) ; Ensure we are past the grid horizontal area
+; Separator scanlines 4-7:
+; calculate tile address LSB for the 4 tiles, one per scanline
+
+GridRowPreparation:
+    ldy #0             ; (2)   ; Y = column (*2) counter
+
+UpdateTileBitmapAddressLoop:
+    ldx CellCursor     ; (3)   ; A = current grid cell value.
+    lda CellTable,x    ; (4)
+
+    ; We need to multiply the value ("n") by 11 (TileHeight).
+    sta TempVar1       ; (3)   ; TempVar1 = value
+
+    asl                ; (2)
+    asl                ; (2)
+    asl                ; (2)
+    sta TempVar2       ; (3)   ; TempVar2 = 8*value
+
+    lda TempVar1       ; (3)
+    adc TempVar1       ; (2)
+    adc TempVar1       ; (2)   ; A = 3*value
+    adc TempVar2       ; (2)   ; A = 3*value + 8*value = 11*value
+
+MultiplicationDone:
+    sta RowTileBmp1,y  ; (5)   ; Store LSB (MSB is fixed)
+
+    iny                ; (2)
+    iny                ; (2)
+    inc CellCursor     ; (5)
+    sta WSYNC
+    cpy #8             ; (2)
+    bne UpdateTileBitmapAddressLoop ; (2 in branch fail)
+
+; Separator scanline 8:
+
+    REPEAT 18    ; (54 = 18x3) ; Switch playfield (after the beam draws it)
         bit $00
     REPEND
 
-    lda #GridPF2Tile           ; Change to the "tile" playfield
-    sta PF2
+    ldy #TileHeight-1  ; (2)   ; Initialize tile scanline counter
+                               ; (goes downwards and is zero-based)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; GRID TILE ROW (AND BOTTOM SEPARATOR) ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    lda #GridPF2Tile   ; (2)   ; Change to the "tile" playfield
+    sta PF2            ; (3)
 
-TileScanline:
+    ; no STA wsync (will do it in the grid row loop)
+
+;;;;;;;;;;;;;;
+;; GRID ROW ;;
+;;;;;;;;;;;;;;
+
+RowScanline:
     sta WSYNC
     REPEAT 7     ; (12 = 6x12)
         nop
@@ -179,24 +316,47 @@ TileScanline:
     nop
     nop
 
+; Here is the magic that makes A B A B into A B C D: when the beam is between
+; the first copies and the second copies of the players, change the bitmaps:
     lda (RowTileBmp3),y
     sta GRP0
     lda (RowTileBmp4),y
     sta GRP1
     dey
-    bpl TileScanline;
+    bpl RowScanline
+    sta WSYNC
 
-    ; FIXME
-    lda #0
+; Go to the next row (or finish grid)
+    lda #0                   ; Disable player (tile) graphics
     sta GRP0
     sta GRP1
-    lda #GridPF2Space
+    lda #GridPF2Space        ; and return to the "space" playfield
     sta PF2
 
+    inc CellCursor           ; Advance cursor (past the side sentinel)
+    ldx CellCursor           ; and get its value
+    lda CellTable,x
 
-    REPEAT 120
-        sta WSYNC
-    REPEND
+    cmp #CellSentinel        ; If it's a sentinel, move on
+    beq FinishGrid
+
+    sta WSYNC                ; otherwise just skip the setup and prepare
+    sta WSYNC                ; another batch of tiles to display
+    sta WSYNC
+    jmp GridRowPreparation
+
+FinishGrid:
+    ldx #GridSeparatorHeight
+DrawBottomSeparatorLoop:
+    sta WSYNC
+    dex
+    bne DrawBottomSeparatorLoop
+
+    lda #0                   ; Disable playfield (grid)
+    sta PF0
+    sta PF1
+    sta PF2
+
 
 
 
@@ -207,13 +367,6 @@ Overscan:
         sta WSYNC
     REPEND
     jmp StartFrame
-
-    INCLUDE "graphics.asm"
-
-    ; Temp, just to clean
-    REPEAT 50
-        .BYTE %00000000
-    REPEND
 
     ORG $FFFA
 
