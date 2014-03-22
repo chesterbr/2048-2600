@@ -24,8 +24,8 @@ RowTileBmp4 = $86            ; the row is drawn
 ;; CONSTANTS ;;
 ;;;;;;;;;;;;;;;
 
-GridColor = $AA
-TileColor = $55
+GridColor = $12
+TileColor = $EC
 
 TileHeight = 11          ; Tiles have 11 scanlines (and are in graphics.asm)
 
@@ -67,8 +67,6 @@ CleanStack:
 InitialValues:
     lda #$F0
     sta HMBL
-    lda #$FF
-    sta COLUPF
     lda #$00
     sta REFP0
     sta REFP1
@@ -78,7 +76,7 @@ InitialValues:
 ;;;;;;;;;;;;;;;;;;;;;;
 
 PosGrid SET RowTileBmp1
-TileAddr SET Tiles + 88
+TileAddr SET Tiles + (11*11)
     REPEAT 5
     lda #<TileAddr
     sta PosGrid

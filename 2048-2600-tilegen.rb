@@ -16,44 +16,43 @@ glyphs = <<END
     ALIGN 256  ; Ensure no page boundary is crossed (would mess with timings)
 
 Tiles:
-t1024:
 .   XXXXXXXX
-.   X      X
-.   X      X
-.   X      X
-.   X      X
-.   X      X
-.   X      X
-.   X      X
-.   X      X
-.   X      X
 .   XXXXXXXX
-;.      XX
-;.      XX
-;.      XX
-;.      XX
-;.      XX
-;.      XX
-;.      XX
-;.      XX
-;.      XX
-;.      XX
-;.      XX
+.   XXXXXXXX
+.   XXXXXXXX
+.   XXXXXXXX
+.   XXXXXXXX
+.   XXXXXXXX
+.   XXXXXXXX
+.   XXXXXXXX
+.   XXXXXXXX
+.   XXXXXXXX
 
+.
+.      XX
+.      XX
+.      XX
+.      XX
+.      XX
+.      XX
+.      XX
+.      XX
+.      XX
+.
+
+.
 .    XXXXXX
 .    XXXXXX
-.        XX
 .        XX
 .    XXXXXX
 .    XXXXXX
 .    XX
 .    XX
-.    XX
 .    XXXXXX
 .    XXXXXX
+.
 
-.    XX  XX
-.    XX  XX
+.
 .    XX  XX
 .    XX  XX
 .    XX  XX
@@ -63,18 +62,19 @@ t1024:
 .        XX
 .        XX
 .        XX
+.
 
-.    XXXXXX
-.    XXXXXX
+.
+.     XXXX
 .    XX  XX
 .    XX  XX
-.    XXXXXX
-.    XXXXXX
+.     XXXX
+.     XXXX
 .    XX  XX
 .    XX  XX
 .    XX  XX
-.    XXXXXX
-.    XXXXXX
+.     XXXX
+.
 
 .
 .     X X
@@ -89,27 +89,27 @@ t1024:
 .
 
 .
-.    XXX XXX
-.      X   X
-.      X   X
-.      X   X
-.    XXX XXX
+.     XX XX
+.      X  X
+.      X  X
+.      X  X
+.     XX XX
 .      X X
 .      X X
 .      X X
-.    XXX XXX
+.     XX XX
 .
 
 .
-.    X   X X
-.    X   X X
-.    X   X X
-.    X   X X
-.    XXX XXX
-.    X X   X
-.    X X   X
-.    X X   X
-.    XXX   X
+.    X  X X
+.    X  X X
+.    X  X X
+.    X  X X
+.    XX XXX
+.    XX   X
+.    XX   X
+.    XX   X
+.    XX   X
 .
 
 .
@@ -148,11 +148,11 @@ t1024:
 .
 .
 
-.     X XXX
-.     X X X
-.     X X X
-.     X X X
-.     X XXX
+.      X XXX
+.      X X X
+.      X X X
+.      X X X
+.      X XXX
 .
 .    XXX X X
 .      X X X
