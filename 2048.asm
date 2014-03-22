@@ -9,52 +9,94 @@
 ; Cell Tables
 ; -----------
 ;
-; We store each player's grid in a "cell table", which can contain one
+; The game store each player's tiles in a "cell table", which can contain one
 ; of these values:
 ;
-;   0  = empty cell
-;   1  = "1" tile
-;   2  = "2" tile
-;   3  = "4" tile
-;   4  = "8" tile
+;   0         = empty cell
+;   255 ($FF) = "sentinel" tile (see below)
+;   1         = "2" tile
+;   2         = "4" tile
+;   3         = "8" tile
+;   4         = "16" tile
 ;   ...
-;   (k = "2^(k-1)" tile)
-;   11 = "2048" tile
-;   12 = "4096" tile
-;   13 = "8192" tile
+;   n         = "2ⁿ" tile (or, if you prefer: log₂k = "k" tile)
+;   ...
+;   11        = "2048" tile
+;   12        = "4096" tile
+;   13        = "8192" tile
+;               (could go on, but try drawing a5-digit 8x10 tiles :-P )
 ;   255 (0xFF) = "sentinel" tile (see below)
 ;
-; In theory, we'd use 16 positions in memory for a 4x4 tile grid. Moving
-; left/right would mean adding/subtracting one position and moving up/down
-; would be done by adding/subtracting 4 positions.
+; In theory, we'd use 16 positions in memory for a 4x4 grid. Navigating
+; left/right on the grid would mean subtracting/adding one position, and
+; moving up/down would be done by asubtracting 4 positions (that
+; is, "cell table y offset" would be 4)
 ;
-; However, we'd need to do complicated boundaries checking, so we'll surround
-; the grid with "sentinel" tiles That would theoretically need 20 extra tiles,
-; as depicted here (S = sentinel, . = number tile or empty cell):
+; However, we'd need to do complicated boundaries checking, so instead I
+; surround the grid with "sentinel" tiles. That would theoretically need
+; 20 extra cells (bytes) to store the grid:
 ;
-;   SSSSSS
-;   S....S
-;   S....S
-;   S....S
-;   S....S
-;   SSSSSS
+;   first cell -> SSSSSS       S = sentinel, . = data (a tile or empty cell)
+;     7th cell -> S....S
+;    13rd cell -> S....S
+;    19th cell -> S....S
+;    25th cell -> S....S
+;                 SSSSSS <- last (36th) cell
 ;
 ; But we can save some space by removing th left-side sentinels, since the
 ; memory position before those will be a sentinel anyway (the previous line's
 ; right-side sentinel).
 ;
 ; We can also cut the first and last sentinel (no movement can reach those),
-; ending with this layout (s = previous sentinel in memory will be used):
+; ending with with this layout in memory (notice how you still hit a
+; sentinel if you try to leave the board in any direction):
 ;
-;    SSSSS
-;   s    S
-;   s    S
-;   s    S
-;   s    S
-;   sSSSS
+;   first cell -> SSSSS        S = sentinel, . = data (a tile or empty cell)
+;     6th cell -> ....S
+;    11th cell -> ....S
+;    16th cell -> ....S
+;    21st cell -> ....S
+;                 SSSS <- last (29th) cell
 ;
-; We'd add/subtract 5 to move up/down a line, and also would add 5 to get
-; from the cell map start to the first effective cell.
+; Only change from usual 4x4 is the cell table vertical y offset is now 5 (we
+; add/subtract 5 to go down/up). The first data cell is still the first cell
+; plus vertical y offset
+;
+;
+; Grid Drawing
+; ------------
+;
+; The grid itself will be drawn using the TIA playfield, and the tiles
+; with player graphics. The Atari only allows two of those graphics per
+; scanline (although they can be repeated up to 3 times by the hardware),
+; and we have four tiles per row, meaning we have to trick it[2] by:
+;
+;    - Load the graphic for tiles A and B:          "A"     and "B"
+;    - Ask TIA to repeat each player graphic:       "A   A" and "B   B"
+;    - Overlap their horizontal positions:          "A B A B"
+;    - Load grpahic for tiles C and D when the      "A B C D"
+;      TV beam is right halfway, that is, here: --------^
+;
+; First three staeps can be done just once when we start drawing the grid
+; (TIA remembers the position), but the fourth must be repeated for every
+; scanline. Timing is crucial on third and fourth steps, but that's Atari
+; programming for you!
+;
+; To translate the cell table into a visual grid, we have to calculate, for
+; each data cell, where the bitmap for its value (tile or empty space) is
+; stored. We use the scanlines between each row of cells to do this calculation,
+; meaning we need 8 RAM positions (4 cells per row x 2 bytes per address).
+;
+; We use the full address instead of a memory page offset to take advantage
+; of the "indirect indexed" 6502 addressing mode [1], but we load the
+; graphics table at a "page aligned" location (i.e., a "$xx00" address),
+; so we only need to update the least significant byte on the positions above.
+
+
+
+
+; [1] http://skilldrick.github.io/easy6502/
+; [2] http://www.slideshare.net/chesterbr/atari-2600programming
 
     PROCESSOR 6502
     INCLUDE "vcs.h"
@@ -87,14 +129,14 @@ CellEmpty    = 0         ; Special cell values (see header)
 Cell2048     = 11
 CellSentinel = 255
 
-CellGridYOffset     = 5  ; How much we +/- to move up/down a line on the grid
+CellTableYOffset     = 5  ; How much we +/- to move up/down a line on the table
 
-; Some relative positions on the grid
-; bottom-right = Top-Left + 3 rows down + 3 columns right
-; add another row down and you have the last sentinel
+; Some relative positions on the cell table
+; Notice how we go to last data cell: Top-Left + 3 rows down + 3 columns right
+; (FYI: add another row down and you'd have the last sentinel)
 FirstDataCellOffset = 5
-LastDataCellOffset  = FirstDataCellOffset + (CellGridYOffset * 3) + 3
-LastCellOffset      = LastDataCellOffset + CellGridYOffset
+LastDataCellOffset  = FirstDataCellOffset + (CellTableYOffset * 3) + 3
+LastCellOffset      = LastDataCellOffset + CellTableYOffset
 
 GridColor = $12
 TileColor = $EC
