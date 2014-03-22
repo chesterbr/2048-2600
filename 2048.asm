@@ -11,7 +11,34 @@
 
     ORG $F000
 
-Initialize:             ; Cleanup from macro.h (by Andrew Davie/DASM)
+;;;;;;;;;
+;; RAM ;;
+;;;;;;;;;
+
+RowTileBmp1 = $80            ; Each of these points to the address of the
+RowTileBmp2 = $82            ; bitmap that will be drawn on the current/next
+RowTileBmp3 = $84            ; row of the grid, and must be updated before
+RowTileBmp4 = $86            ; the row is drawn
+
+;;;;;;;;;;;;;;;
+;; CONSTANTS ;;
+;;;;;;;;;;;;;;;
+
+GridColor = $AA
+TileColor = $55
+
+TileHeight = 11          ; Tiles have 11 scanlines (and are in graphics.asm)
+
+GridPF0 = $00            ; Grid sides are always clear, minus last bit
+GridPF1 = $01
+GridPF2Tile  = %10011001 ; Grid has "holes" for numbers
+GridPF2Space = %11111111 ; but is solid between the tiles
+
+;;;;;;;;;;;;;;;
+;; BOOTSTRAP ;;
+;;;;;;;;;;;;;;;
+
+Initialize:             ; Cleanup routine from macro.h (by Andrew Davie/DASM)
     sei
     cld
     ldx #0
@@ -23,22 +50,46 @@ CleanStack:
     pha
     bne CleanStack
 
-InitialValues:
-    lda #$AB
+;;;;;;;;;;;;;;;;;;;
+;; GENERAL SETUP ;;
+;;;;;;;;;;;;;;;;;;;
+
+    lda #%00000001      ; Playfield (grid) in mirror (symmetrical) mode
+    sta CTRLPF
+    lda #GridColor
+    sta COLUPF
+
+    lda #TileColor      ; Players will be used to draw the tiles (numbers)
     sta COLUP0
     sta COLUP1
+
+
+InitialValues:
     lda #$F0
     sta HMBL
     lda #$FF
     sta COLUPF
-    lda #$30
-    sta CTRLPF
-    lda #$02
-    sta NUSIZ0
-    sta NUSIZ1
     lda #$00
     sta REFP0
     sta REFP1
+
+;;;;;;;;;;;;;;;;;;;;;;
+;; GRID PREPARATION ;;
+;;;;;;;;;;;;;;;;;;;;;;
+
+PosGrid SET RowTileBmp1
+TileAddr SET Tiles + 88
+    REPEAT 5
+    lda #<TileAddr
+    sta PosGrid
+PosGrid SET PosGrid + 1
+    lda #>TileAddr
+    sta PosGrid
+PosGrid SET PosGrid + 1
+TileAddr SET TileAddr + TileHeight
+    REPEND
+
+
 
 StartFrame:
     lda #%00000010
@@ -48,74 +99,108 @@ StartFrame:
     REPEND
     lda #0
     sta VSYNC
+    sta WSYNC
 
 VBlank:
-    sta WSYNC
-    REPEAT 18
-        nop
-    REPEND
-    sta RESP0
-    nop
-    sta RESP1
 
-    sta WSYNC      ; First line positioned the ball
 
-    lda #$F0
-    sta HMP1
-    sta HMOVE
 
     REPEAT 35
         sta WSYNC
     REPEND
     ldx #0         ; scanline counter
     stx VBLANK
-    ldy #$00
-
-Scanline:
     sta WSYNC
-    ;sta HMOVE
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
 
-    lda t1024,y
+;;;;;;;;;;;;;;;;;;;;;;;;
+;; GRID TOP SEPARATOR ;;
+;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Top separator scanline 1:
+; configure grid playfield
+    lda #GridPF0
+    sta PF0
+    lda #GridPF1
+    sta PF1
+    lda #GridPF2Space
+    sta PF2
+    sta WSYNC
+
+; Top separator scanlines 2 and 3:
+; player graphics duplicated and positioned like this: P0 P1 P0 P1
+
+    lda #$02    ; (2)        ; Duplicate the players (with some space between)
+    sta NUSIZ0  ; (3)
+    sta NUSIZ1  ; (3)
+
+    REPEAT 9    ; (27 = 9x3) ; Position P0 close to the beginning of 1st tile
+        bit $00
+    REPEND
+    sta RESP0   ; (3)
+
+    bit $00     ; (3)        ; and P1 close to the beginning of the second
+    sta RESP1   ; (3)
+    sta WSYNC
+
+    lda #$F0                 ; Fine-tune player positions to fill the grid
+    sta HMP0
+    lda #$10
+    sta HMP1
+    sta WSYNC
+    sta HMOVE
+    sta WSYNC
+
+; Top separator scanline 4 (last one)
+    ldy #TileHeight-1          ; Initialize tile scanline counter
+                               ; (goes downwards and is zero-based)
+
+    REPEAT 20    ; (60 = 20x3) ; Ensure we are past the grid horizontal area
+        bit $00
+    REPEND
+
+    lda #GridPF2Tile           ; Change to the "tile" playfield
+    sta PF2
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; GRID TILE ROW (AND BOTTOM SEPARATOR) ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+TileScanline:
+    sta WSYNC
+    REPEAT 7     ; (12 = 6x12)
+        nop
+    REPEND
+
+    lda (RowTileBmp1),y
     sta GRP0
-    lda t2048,y
+    lda (RowTileBmp2),y
     sta GRP1
 
     nop
     nop
     nop
     nop
-    nop
-    nop
-    nop
 
-    lda t512,y
+    lda (RowTileBmp3),y
     sta GRP0
-    lda t32,y
+    lda (RowTileBmp4),y
     sta GRP1
-    iny
+    dey
+    bpl TileScanline;
 
-    ; lda TileBitmaps,y
-    ; sta GRP1
-    ; dey
-    ; lda TileBitmaps,y
-    ; sta GRP0
-    ; iny
-    ; lda TileBitmaps,y
-    ; sta GRP0
-    ; iny
+    ; FIXME
+    lda #0
+    sta GRP0
+    sta GRP1
+    lda #GridPF2Space
+    sta PF2
 
 
+    REPEAT 120
+        sta WSYNC
+    REPEND
 
-    inx
-    cpx #60 ; LIE
-    bne Scanline
+
 
 Overscan:
     lda #%01000010
@@ -125,96 +210,7 @@ Overscan:
     REPEND
     jmp StartFrame
 
-TileBitmaps:
-t2048:
-    .BYTE %00000000
-    .BYTE %11101110
-    .BYTE %00101010
-    .BYTE %11101010
-    .BYTE %10001010
-    .BYTE %11101110
-    .BYTE %00000000
-    .BYTE %10101110 ; 2048
-    .BYTE %10101010
-    .BYTE %11101110
-    .BYTE %00101010
-    .BYTE %00101110
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
-
-t1024:
-    .BYTE %00000000
-    .BYTE %01001110
-    .BYTE %01001010
-    .BYTE %01001010
-    .BYTE %01001010
-    .BYTE %01001110
-    .BYTE %00000000
-    .BYTE %11101010 ; 1024
-    .BYTE %00101010
-    .BYTE %11101110
-    .BYTE %10000010
-    .BYTE %11100010
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
-
-t512:
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %11010110
-    .BYTE %10010010
-    .BYTE %10010010
-    .BYTE %10010010
-    .BYTE %11010110
-    .BYTE %01010100
-    .BYTE %01010100
-    .BYTE %01010100
-    .BYTE %11010110
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
-
-t256:
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %11011010
-    .BYTE %01010010
-    .BYTE %01010010
-    .BYTE %01010010
-    .BYTE %11011011
-    .BYTE %10001011
-    .BYTE %10001011
-    .BYTE %10001011
-    .BYTE %11011011
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
-
-t32:
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %11100111
-    .BYTE %00100001
-    .BYTE %00100001
-    .BYTE %00100001
-    .BYTE %11100111
-    .BYTE %00100100
-    .BYTE %00100100
-    .BYTE %00100100
-    .BYTE %11100111
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
-    .BYTE %00000000
+    INCLUDE "graphics.asm"
 
     ; Temp, just to clean
     REPEAT 50
