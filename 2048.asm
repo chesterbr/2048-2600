@@ -102,10 +102,36 @@
 ; of the "indirect indexed" 6502 addressing mode [1], but we load the
 ; graphics table at a "page aligned" location (i.e., a "$xx00" address),
 ; so we only need to update the least significant byte on the positions above.
-
-
-
-
+;
+; Shifting
+; --------
+;
+; The original 2048 sets a "vector" strucutre that points two variables with
+; the direction in which the tiles will shift (e.g., vector.x = -1, vector.y
+; = 0 means we'll move left). It also processes them from the opposite side
+; (e.g., start from leftmost if it's a right shift), making the first one
+; stop before the edge, the second stop before the first, etc.
+;
+; It also marks each merged tile as so (removing the marks between shifts),
+; so it can block multiple merges (i.e., the row " 4 4 8 16" does not go
+; straight to "32" with a left, but first becomes "8 8 16", then "16 16", then
+; "32". Similarly, "2 2 2 2" would first become "4 4", then "8". Finally,
+; it stores the previous position for each tile, and lets the awesomeness
+; of CSS move them all at once with ease.
+;
+; We'll translate this idea by having a single-byte "vector" which can be
+; -1/+1 for left/right, and -5/+5 for up/down (each row is 4 bytes plus a
+; sentinel tile, see above). Each tile will be pushed (by adding the vector
+; value) until the next cell is non-empty and does not match its value.
+;
+; The vector signal also tells us where to start to ensure they all get to
+; the end: negative (left/up) start processing from the first cell and
+; positive (right/down) start from the last.
+;
+; Merged tiles are marked by setting bit 7 on their values, which will be
+; easy to check in upcoming pushed blocks without needing extra memory.
+; We'll only miss the animations, but we can't have everything.
+;
 ; [1] http://skilldrick.github.io/easy6502/
 ; [2] http://www.slideshare.net/chesterbr/atari-2600programming
 

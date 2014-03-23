@@ -23,13 +23,15 @@ Based on the [original 2048 game][1] Copyright (c) 2014 Gabriele Cirulli
 
 ### Missing for a "1.0" release:
 
-- Merging cells
 - Centering the board horizontally
 - Review scanline counts
 - RESET switch
 
 ### Feature Creep Corner
 
+- Different colors for each tile value
+- Animation for new tiles
+- Animation for merged tiles
 - Title screen
 - Counting points
 - Time-based multiplayer like [Emil Stolarsky's][6]
