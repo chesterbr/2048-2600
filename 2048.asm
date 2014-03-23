@@ -131,14 +131,16 @@ CellCursor = $A5 ;($88+$1D)  ; Loop counter for address of the "current" cell
 TempVar1 = $A6               ; General use variable
 TempVar2 = $A7               ; General use variable
 
-GameMode = $A8;
+GameState = $A8;
 
 ; Tile shift routine variables
 ShiftVector        = $A9     ; What to add to get to "next" tile in current direction
 TilesLoopDirection = $AA     ; +1 for left/up, -1 for right/down
 OffsetBeingPushed  = $AB     ; Position in cell table of the tile being pushed
-ShiftEndOffset     = $AE     ; Position in which we'll stop processing
-CurrentValue       = $AC     ; Value of that tile
+ShiftEndOffset     = $AC     ; Position in which we'll stop processing
+CurrentValue       = $AD     ; Value of that tile
+
+RandomNumber       = $AE     ; Frame count based RNG, used to add tiles
 
 
 
@@ -148,12 +150,20 @@ CurrentValue       = $AC     ; Value of that tile
 
 ; Special cell values (see header)
 CellEmpty    = 0
+Cell2        = 1
+Cell4        = 2
 Cell2048     = 11
 CellSentinel = 255
 
-; Possible values of GameMode
-WaitingJoyPress   = 0        ;
-WaitingJoyRelease = 1        ;
+; The original 2048 puts 2s with 90% probability and 4s with 10%. Our random
+; number range between 0-255, so we'll put a 4 if it is above 256 * 0.9 ≅ 230
+ThresholdForTile4 = 230
+
+; Possible values of GameState
+WaitingJoyPress   = 0
+Shifting          = 1
+AddingRandomTile  = 2
+WaitingJoyRelease = 3
 
 
 CellTableYOffset     = 5  ; How much we +/- to move up/down a line on the table
@@ -164,6 +174,18 @@ CellTableYOffset     = 5  ; How much we +/- to move up/down a line on the table
 FirstDataCellOffset = 5
 LastDataCellOffset  = FirstDataCellOffset + (CellTableYOffset * 3) + 3
 LastCellOffset      = LastDataCellOffset + CellTableYOffset
+
+; Position of sentinels that might be picked as random tiles (for being the
+; ones on the right "wall", see drawing on header), relative to the
+; first data cell offset.
+; We'll replace them with the last three, allowing our random nibble to
+; effectively map a random data cell
+Wall1 = 4
+Wall2 = 9
+Wall3 = 14
+Wall1Repl = 16
+Wall2Repl = 17
+Wall3Repl = 18
 
 GridColor = $12
 TileColor = $EC
@@ -454,50 +476,49 @@ Overscan:
     lda SWCHA
     and #JoyMaskP0           ; Only player 0 bits
 
-    ldx GameMode             ; Check if we are waiting for the joystick
-    cpx #WaitingJoyRelease   ; to be either pressed or released,
-    beq CheckJoyRelease      ; otherwise skip the whole thing
+    ldx GameState            ; We only care for states in which we are waiting
+    cpx #WaitingJoyRelease   ; for a joystick press or release
+    beq CheckJoyRelease
     cpx #WaitingJoyPress
     bne EndJoyCheck
 
 ; If the joystick is in one of these directions, trigger the shift by
-; setting the ShiftVector and change mode (to avoid multiple shifts)
+; setting the ShiftVector and changing mode
 CheckJoyUp:
     cmp #JoyP0Up
     bne CheckJoyDown
     lda #UpShiftVector
-    jmp SetShiftVector
+    jmp TriggerShift
 
 CheckJoyDown:
     cmp #JoyP0Down
     bne CheckJoyLeft
     lda #DownShiftVector
-    jmp SetShiftVector
+    jmp TriggerShift
 
 CheckJoyLeft:
     cmp #JoyP0Left
     bne CheckJoyRight
     lda #LeftShiftVector
-    jmp SetShiftVector
+    jmp TriggerShift
 
 CheckJoyRight:
     cmp #JoyP0Right
     bne EndJoyCheck
     lda #RightShiftVector
 
-SetShiftVector:
-    sta ShiftVector            ; Triggers the shift on that direction
-    lda #WaitingJoyRelease
-    sta GameMode               ; Avoids multiple shifts
+TriggerShift:
+    sta ShiftVector            ; We'll need the direction vector on the shift
+    lda #Shifting
+    sta GameState
     jmp EndJoyCheck
 
-; If we have just done a shift (by pushing the joystick), we'll end up here
 CheckJoyRelease:
     cmp #JoyMaskP0
     bne EndJoyCheck
 
     lda #WaitingJoyPress       ; Joystick released, can accept shifts again
-    sta GameMode
+    sta GameState
 
 EndJoyCheck:
     sta WSYNC
@@ -506,18 +527,23 @@ EndJoyCheck:
 ;; SHIFT BOARD ;;
 ;;;;;;;;;;;;;;;;;
 
-    lda ShiftVector
-    beq EndShift             ; Zero vector => no shift for you
+    lda GameState
+    cmp #Shifting
+    bne EndShift               ; Not shifting
 
 ; Outer loop will traverse the entire cell map in the *opposite* order of the
 ; movement, that is, from the beginning for right/up and from end for left/down,
-; so they stack and merge as expected.
+; so they stack and merge as expected. Let's setup these parameters
+
+    lda ShiftVector
     bmi NegativeVector
+
 PositiveVector:
     ldx #LastDataCellOffset    ; Start from the last cell
     ldy #FirstDataCellOffset-1 ; Stop when we pass the first one
     lda #$FF                   ; Go backwards
     jmp SetShiftParams
+
 NegativeVector:
     ldx #FirstDataCellOffset   ; Start from the first cell
     ldy #LastDataCellOffset+1  ; Stop when we pass the last one
@@ -527,8 +553,8 @@ SetShiftParams:
     sty ShiftEndOffset
     sta TilesLoopDirection
 
-; Notice that X will keep the cell being processed (main loop), and will
-; advance until we have no more processable tile positions.
+; Notice that X will keep the offset of the cell being processed (main loop),
+; and will advance until we have no more processable tile positions.
 ;
 ; Whenever we have a "good" tile on X (not empty or sentinel), we'll start
 ; pushing it on the vector direciton (inner/"push" loop), until we can't
@@ -549,8 +575,11 @@ AdvanceToNext:
     adc TilesLoopDirection
     tax
     cpx ShiftEndOffset
-    beq EndShift                  ; Processed all tiles, shift is done!
+    beq FinishShift               ; Processed all tiles, shift is done!
     jmp CheckIfXIsPushable        ; Check the new candidate
+
+; Inner loop will push the tile currenlty picked by the outer loop towards
+; the desired direction, until hitting an unmergeable tile
 
 StartPush:
     lda CellTable,x
@@ -587,17 +616,65 @@ NotEmpty:
 ;    bne AdvanceToNex t;  Can't push or merge
 ; merge!
 
+FinishShift:
+    lda #AddingRandomTile   ; Upon finishing the shift, we'll add a new tile
+    sta GameState
+
 EndShift:
-    lda #0
-    sta ShiftVector
     ; FIXME we surely spent more than a scanline, figure out something
-    ; (idea: each non-sentinel in a single scanline)
+    ; (idea: each processed tile in a single scanline)
     sta WSYNC
 
+;;;;;;;;;;;;;;;;;;;;;
+;; NEW RANDOM TILE ;;
+;;;;;;;;;;;;;;;;;;;;;
 
+    lda GameState
+    cmp #AddingRandomTile
+    bne EndRandomTile        ; No need for a random tile now
 
+; Pick a random cell from a number from 0..15, mapping those that would
+; hit sentinels on the right side ("walls") to the ones not covered by the range
 
-    REPEAT 28
+    lda RandomNumber
+    and #$0F
+    cmp #Wall1
+    bne NoWall1
+    lda #Wall1Repl
+NoWall1:
+    cmp #Wall2
+    bne NoWall2
+    lda #Wall2Repl
+NoWall2:
+    cmp #Wall3Repl
+    bne CheckIfCellIsEmpty
+    lda #Wall3Repl
+
+CheckIfCellIsEmpty:
+    tax                       ; Cell offset now in X
+    lda CellTable+FirstDataCellOffset,x
+    cmp #CellEmpty
+    bne EndRandomTile         ; Tile not empty, let's try again next frame
+
+PickTileType:
+    ldy RandomNumber
+    cpy #ThresholdForTile4
+    bcc PickTile2
+    lda #Cell4                ; >= threshold, A will be a "4" tile
+    jmp AddTileToCell
+PickTile2:
+    lda #Cell2                ; < threshold, A will be a "2" tile
+
+AddTileToCell:
+    sta CellTable+FirstDataCellOffset,x
+    lda #WaitingJoyRelease
+    sta GameState             ; Wait for joystick release before a new shift
+
+EndRandomTile:
+    inc RandomNumber         ; Feed the random number generator
+    sta WSYNC
+
+    REPEAT 27
         sta WSYNC
     REPEND
     jmp StartFrame

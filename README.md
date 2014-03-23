@@ -23,7 +23,6 @@ Based on the [original 2048 game][1] Copyright (c) 2014 Gabriele Cirulli
 
 ### Missing for a "1.0" release:
 
-- Adding a random cell
 - Merging cells
 - Centering the board horizontally
 - Review scanline counts
@@ -31,6 +30,8 @@ Based on the [original 2048 game][1] Copyright (c) 2014 Gabriele Cirulli
 
 ### Feature Creep Corner
 
+- Title screen
+- Counting points
 - Time-based multiplayer like [Emil Stolarsky's][6]
 - Turn-based multiplayer (survival-style), one or two players
 - An easter egg (after all, Atari 2600 [pioneered][5] the genre)
