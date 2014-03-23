@@ -593,14 +593,16 @@ PushCurrentTile:                  ; Inner loop begins here
     tay
     lda CellTable,y          ; A <= value of next cell in the vector direction
 
-    cmp #CellEmpty           ; If empty, move to it, that is:
-    bne NotEmpty
+    cmp #CellEmpty
+    bne NotEmpty             ; We won't move if the cell is not empty
+
+MoveCurrentToNext:
     lda CurrentValue
-    sta CellTable,y          ;   - set next cell to current value
+    sta CellTable,y          ; Set next cell to current value
 
     lda #CellEmpty
     ldy OffsetBeingPushed
-    sta CellTable,y          ;   - clear current cell
+    sta CellTable,y          ; Clear current cell
 
     clc
     lda OffsetBeingPushed
@@ -610,11 +612,13 @@ PushCurrentTile:                  ; Inner loop begins here
     jmp PushCurrentTile      ; Keep pushing
 
 NotEmpty:
-; FIXME implement merge
-    jmp AdvanceToNext
-;    cmp CurrentValue            ;
-;    bne AdvanceToNex t;  Can't push or merge
-; merge!
+    cmp CurrentValue
+    bne AdvanceToNext;       ; Can't merge, can't push, done with this tile
+
+    inc CurrentValue         ; Multiply by 2 in log (that is, add 1 to exponent)
+    jmp MoveCurrentToNext    ; Move the multiplied cell to the target position
+
+
 
 FinishShift:
     lda #AddingRandomTile   ; Upon finishing the shift, we'll add a new tile
