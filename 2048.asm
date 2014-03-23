@@ -122,6 +122,14 @@ TempVar2 = $A7               ; General use variable
 
 GameMode = $A8;
 
+; Tile shift routine variables
+ShiftVector        = $A9     ; What to add to get to "next" tile in current direction
+TilesLoopDirection = $AA     ; +1 for left/up, -1 for right/down
+OffsetBeingPushed  = $AB     ; Position in cell table of the tile being pushed
+ShiftEndOffset     = $AE     ; Position in which we'll stop processing
+CurrentValue       = $AC     ; Value of that tile
+
+
 
 ;;;;;;;;;;;;;;;
 ;; CONSTANTS ;;
@@ -162,6 +170,12 @@ JoyP0Down  = %11010000
 JoyP0Left  = %10110000
 JoyP0Right = %01110000
 JoyMaskP0  = %11110000
+
+; Amount to add to move to a direciton in the cell grid, in two's complement
+RightShiftVector = $01     ;  1
+LeftShiftVector  = $FF     ; -1
+DownShiftVector  = $05     ;  5
+UpShiftVector    = $FB     ; -5
 
 ;;;;;;;;;;;;;;;
 ;; BOOTSTRAP ;;
@@ -323,6 +337,7 @@ UpdateTileBitmapAddressLoop:
     asl                ; (2)
     sta TempVar2       ; (3)   ; TempVar2 = 8*value
 
+    clc                ; (2)
     lda TempVar1       ; (3)
     adc TempVar1       ; (2)
     adc TempVar1       ; (2)   ; A = 3*value
@@ -434,67 +449,144 @@ Overscan:
     cpx #WaitingJoyPress
     bne EndJoyCheck
 
+; If the joystick is in one of these directions, trigger the shift by
+; setting the ShiftVector and change mode (to avoid multiple shifts)
 CheckJoyUp:
     cmp #JoyP0Up
     bne CheckJoyDown
-
-    lda 1
-    sta CellTable + FirstDataCellOffset
-    jmp ShiftBoard
+    lda #UpShiftVector
+    jmp SetShiftVector
 
 CheckJoyDown:
     cmp #JoyP0Down
     bne CheckJoyLeft
-
-    lda 2
-    sta CellTable + FirstDataCellOffset
-    jmp ShiftBoard
+    lda #DownShiftVector
+    jmp SetShiftVector
 
 CheckJoyLeft:
     cmp #JoyP0Left
     bne CheckJoyRight
-
-    lda 3
-    sta CellTable + FirstDataCellOffset
-    jmp ShiftBoard
+    lda #LeftShiftVector
+    jmp SetShiftVector
 
 CheckJoyRight:
     cmp #JoyP0Right
     bne EndJoyCheck
+    lda #RightShiftVector
 
-    lda 4
-    sta CellTable + FirstDataCellOffset
-    jmp ShiftBoard
-
-ShiftBoard:
-    lda #WaitingJoyRelease     ; Wait for the next play
-    sta GameMode
-
-    ; FIXME: do shift the board
+SetShiftVector:
+    sta ShiftVector            ; Triggers the shift on that direction
+    lda #WaitingJoyRelease
+    sta GameMode               ; Avoids multiple shifts
     jmp EndJoyCheck
 
-
+; If we have just done a shift (by pushing the joystick), we'll end up here
 CheckJoyRelease:
     cmp #JoyMaskP0
     bne EndJoyCheck
 
-    lda #WaitingJoyPress     ; Wait for the next play
+    lda #WaitingJoyPress       ; Joystick released, can accept shifts again
     sta GameMode
-
-    ; just to test
-    lda 0
-    sta CellTable + FirstDataCellOffset
-
-
-
-
-
-; Check i
 
 EndJoyCheck:
     sta WSYNC
 
-    REPEAT 29
+;;;;;;;;;;;;;;;;;
+;; SHIFT BOARD ;;
+;;;;;;;;;;;;;;;;;
+
+    lda ShiftVector
+    beq EndShift             ; Zero vector => no shift for you
+
+; Outer loop will traverse the entire cell map in the *opposite* order of the
+; movement, that is, from the beginning for right/up and from end for left/down,
+; so they stack and merge as expected.
+    bmi NegativeVector
+PositiveVector:
+    ldx #LastDataCellOffset    ; Start from the last cell
+    ldy #FirstDataCellOffset-1 ; Stop when we pass the first one
+    lda #$FF                   ; Go backwards
+    jmp SetShiftParams
+NegativeVector:
+    ldx #FirstDataCellOffset   ; Start from the first cell
+    ldy #LastDataCellOffset+1  ; Stop when we pass the last one
+    lda #$01                   ; GoF orward
+
+SetShiftParams:
+    sty ShiftEndOffset
+    sta TilesLoopDirection
+
+; Notice that X will keep the cell being processed (main loop), and will
+; advance until we have no more processable tile positions.
+;
+; Whenever we have a "good" tile on X (not empty or sentinel), we'll start
+; pushing it on the vector direciton (inner/"push" loop), until we can't
+; push anyomre.
+
+CheckIfXIsPushable:
+    lda CellTable,x
+    cmp #CellSentinel
+    beq AdvanceToNext             ; Skip empty cells
+    cmp #CellEmpty
+    beq AdvanceToNext             ; Skip sentinels
+    stx OffsetBeingPushed
+    jmp StartPush                 ; This one is good, start pushing it
+
+AdvanceToNext:
+    txa                           ; Move X to the next candidate offset
+    clc
+    adc TilesLoopDirection
+    tax
+    cpx ShiftEndOffset
+    beq EndShift                  ; Processed all tiles, shift is done!
+    jmp CheckIfXIsPushable        ; Check the new candidate
+
+StartPush:
+    lda CellTable,x
+    sta CurrentValue              ; Keep the current tile's value
+    stx OffsetBeingPushed         ; Initialize inner loop counter
+
+PushCurrentTile:                  ; Inner loop begins here
+    clc
+    lda OffsetBeingPushed
+    adc ShiftVector
+    tay
+    lda CellTable,y          ; A <= value of next cell in the vector direction
+
+    cmp #CellEmpty           ; If empty, move to it, that is:
+    bne NotEmpty
+    lda CurrentValue
+    sta CellTable,y          ;   - set next cell to current value
+
+    lda #CellEmpty
+    ldy OffsetBeingPushed
+    sta CellTable,y          ;   - clear current cell
+
+    clc
+    lda OffsetBeingPushed
+    adc ShiftVector
+    sta OffsetBeingPushed    ;   - make next the one being pushed
+
+    jmp PushCurrentTile      ; Keep pushing
+
+NotEmpty:
+; FIXME implement merge
+    jmp AdvanceToNext
+;    cmp CurrentValue            ;
+;    bne AdvanceToNex t;  Can't push or merge
+; merge!
+
+EndShift:
+    lda #0
+    sta ShiftVector
+    ; FIXME we surely spent more than a scanline, figure out something
+    ; (idea: each non-sentinel in a single scanline)
+    sta WSYNC
+
+
+
+
+    REPEAT 28
         sta WSYNC
     REPEND
     jmp StartFrame
