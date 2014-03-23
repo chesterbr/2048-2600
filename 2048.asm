@@ -1,10 +1,21 @@
 ;
-; 2048.asm
+; 2048 2600
+; =========
 ;
-; Add some explanation
+; A port of the 2048 game to the Atari 2600
 ;
-;   dasm 2048.asm -2048.bin -f3
+; © 2014 Carlos Duarte do Nascimento (chesterbr)
+; <cd@pobox.com | @chesterbr | http://chester.me>
 ;
+; Latest version:
+;   http://github.com/chesterbr/2048-2060
+;
+
+; Building
+; ---------
+;
+; Build it with DASM (http://dasm-dillon.sourceforge.net/)
+;   dasm 2048.asm -o2048.bin -f3
 
 ; Cell Tables
 ; -----------
