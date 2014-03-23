@@ -24,7 +24,6 @@
 ; of these values:
 ;
 ;   0         = empty cell
-;   255 ($FF) = "sentinel" tile (see below)
 ;   1         = "2" tile
 ;   2         = "4" tile
 ;   3         = "8" tile
@@ -36,7 +35,7 @@
 ;   12        = "4096" tile
 ;   13        = "8192" tile
 ;               (could go on, but try drawing a5-digit 8x10 tiles :-P )
-;   255 (0xFF) = "sentinel" tile (see below)
+;   128 ($FF) = sentinel tile (see below)
 ;
 ; In theory, we'd use 16 positions in memory for a 4x4 grid. Navigating
 ; left/right on the grid would mean subtracting/adding one position, and
@@ -44,8 +43,8 @@
 ; is, "cell table y offset" would be 4)
 ;
 ; However, we'd need to do complicated boundaries checking, so instead I
-; surround the grid with "sentinel" tiles. That would theoretically need
-; 20 extra cells (bytes) to store the grid:
+; surround the grid with "sentinel" or "wall" tiles. That would theoretically
+; need 20 extra cells (bytes) to store the grid:
 ;
 ;   first cell -> SSSSSS       S = sentinel, . = data (a tile or empty cell)
 ;     7th cell -> S....S
@@ -102,6 +101,7 @@
 ; of the "indirect indexed" 6502 addressing mode [1], but we load the
 ; graphics table at a "page aligned" location (i.e., a "$xx00" address),
 ; so we only need to update the least significant byte on the positions above.
+;
 ;
 ; Shifting
 ; --------
@@ -179,7 +179,11 @@ CellEmpty    = 0
 Cell2        = 1
 Cell4        = 2
 Cell2048     = 11
-CellSentinel = 255
+CellSentinel = 127          ; Can't use bit 7 (will be wiped)
+
+MergedMask      = %10000000 ; Bit 7 is set to flag tiles as merged
+ClearMergedMask = %01111111 ; We need to reset to get to original values
+
 
 ; The original 2048 puts 2s with 90% probability and 4s with 10%. Our random
 ; number range between 0-255, so we'll put a 4 if it is above 256 * 0.9 ≅ 230
@@ -567,13 +571,13 @@ EndJoyCheck:
 PositiveVector:
     ldx #LastDataCellOffset    ; Start from the last cell
     ldy #FirstDataCellOffset-1 ; Stop when we pass the first one
-    lda #$FF                   ; Go backwards
+    lda #$FF                   ; Go backwards (-1)
     jmp SetShiftParams
 
 NegativeVector:
     ldx #FirstDataCellOffset   ; Start from the first cell
     ldy #LastDataCellOffset+1  ; Stop when we pass the last one
-    lda #$01                   ; GoF orward
+    lda #$01                   ; Go forward (+1)
 
 SetShiftParams:
     sty ShiftEndOffset
@@ -638,21 +642,36 @@ MoveCurrentToNext:
     jmp PushCurrentTile      ; Keep pushing
 
 NotEmpty:
+    cmp #MergedMask
+    bcs AdvanceToNext        ; Can't merge if next cell has already been merged
     cmp CurrentValue
-    bne AdvanceToNext;       ; Can't merge, can't push, done with this tile
+    bne AdvanceToNext;       ; Only merge if value matches
 
+Merge:
     inc CurrentValue         ; Multiply by 2 in log (that is, add 1 to exponent)
+    lda #MergedMask
+    ora CurrentValue         ; Add the "merged" bit (so it doesn't match others)
+    sta CurrentValue
     jmp MoveCurrentToNext    ; Move the multiplied cell to the target position
 
-
-
 FinishShift:
-    lda #AddingRandomTile   ; Upon finishing the shift, we'll add a new tile
+    lda #AddingRandomTile    ; Upon finishing the shift, we'll add a new tile
     sta GameState
+
+    ldx FirstDataCellOffset  ; Clear the merged bit (restoring tile values)
+ClearMergeBitLoop:
+    lda CellTable,x
+    and #ClearMergedMask
+    sta CellTable,x
+    inx
+    cpx #LastDataCellOffset+1
+    bne ClearMergeBitLoop
+
 
 EndShift:
     ; FIXME we surely spent more than a scanline, figure out something
-    ; (idea: each processed tile in a single scanline)
+    ; (idea: each processed tile in a single scanline; clear loop in
+    ;  its own scanline as well)
     sta WSYNC
 
 ;;;;;;;;;;;;;;;;;;;;;
