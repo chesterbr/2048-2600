@@ -120,14 +120,22 @@ CellCursor = $A5 ;($88+$1D)  ; Loop counter for address of the "current" cell
 TempVar1 = $A6               ; General use variable
 TempVar2 = $A7               ; General use variable
 
+GameMode = $A8;
+
 
 ;;;;;;;;;;;;;;;
 ;; CONSTANTS ;;
 ;;;;;;;;;;;;;;;
 
-CellEmpty    = 0         ; Special cell values (see header)
+; Special cell values (see header)
+CellEmpty    = 0
 Cell2048     = 11
 CellSentinel = 255
+
+; Possible values of GameMode
+WaitingJoyPress   = 0        ;
+WaitingJoyRelease = 1        ;
+
 
 CellTableYOffset     = 5  ; How much we +/- to move up/down a line on the table
 
@@ -148,6 +156,12 @@ GridPF0 = $00            ; Grid sides are always clear, minus last bit
 GridPF1 = $01
 GridPF2Tile  = %10011001 ; Grid has "holes" for numbers
 GridPF2Space = %11111111 ; but is solid between the tiles
+
+JoyP0Up    = %11100000      ; Masks to bit-test SWCHA for joystick movement
+JoyP0Down  = %11010000
+JoyP0Left  = %10110000
+JoyP0Right = %01110000
+JoyMaskP0  = %11110000
 
 ;;;;;;;;;;;;;;;
 ;; BOOTSTRAP ;;
@@ -404,8 +418,83 @@ DrawBottomSeparatorLoop:
 
 Overscan:
     lda #%01000010
-    sta VBLANK      ;
-    REPEAT 30
+    sta VBLANK               ; Disable output
+
+;;;;;;;;;;;;;;;;;;;;
+;; INPUT CHECKING ;;
+;;;;;;;;;;;;;;;;;;;;
+
+; Joystick
+    lda SWCHA
+    and #JoyMaskP0           ; Only player 0 bits
+
+    ldx GameMode             ; Check if we are waiting for the joystick
+    cpx #WaitingJoyRelease   ; to be either pressed or released,
+    beq CheckJoyRelease      ; otherwise skip the whole thing
+    cpx #WaitingJoyPress
+    bne EndJoyCheck
+
+CheckJoyUp:
+    cmp #JoyP0Up
+    bne CheckJoyDown
+
+    lda 1
+    sta CellTable + FirstDataCellOffset
+    jmp ShiftBoard
+
+CheckJoyDown:
+    cmp #JoyP0Down
+    bne CheckJoyLeft
+
+    lda 2
+    sta CellTable + FirstDataCellOffset
+    jmp ShiftBoard
+
+CheckJoyLeft:
+    cmp #JoyP0Left
+    bne CheckJoyRight
+
+    lda 3
+    sta CellTable + FirstDataCellOffset
+    jmp ShiftBoard
+
+CheckJoyRight:
+    cmp #JoyP0Right
+    bne EndJoyCheck
+
+    lda 4
+    sta CellTable + FirstDataCellOffset
+    jmp ShiftBoard
+
+ShiftBoard:
+    lda #WaitingJoyRelease     ; Wait for the next play
+    sta GameMode
+
+    ; FIXME: do shift the board
+    jmp EndJoyCheck
+
+
+CheckJoyRelease:
+    cmp #JoyMaskP0
+    bne EndJoyCheck
+
+    lda #WaitingJoyPress     ; Wait for the next play
+    sta GameMode
+
+    ; just to test
+    lda 0
+    sta CellTable + FirstDataCellOffset
+
+
+
+
+
+; Check i
+
+EndJoyCheck:
+    sta WSYNC
+
+    REPEAT 29
         sta WSYNC
     REPEND
     jmp StartFrame
