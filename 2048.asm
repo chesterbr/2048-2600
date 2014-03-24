@@ -313,8 +313,12 @@ InitCellTableLoop2Inner:
     cpx #FirstDataCellOffset
     bcs InitCellTableLoop2Outer   ; and continue until we pass the top-left cell
 
+;;;;;;;;;;;;;;;;;
+;; FRAME START ;;
+;;;;;;;;;;;;;;;;;
+
 StartFrame:
-    lda #%00000010
+    lda #%00000010                ; VSYNC
     sta VSYNC
     REPEAT 3
         sta WSYNC
@@ -323,16 +327,23 @@ StartFrame:
     sta VSYNC
     sta WSYNC
 
-VBlank:
-
-
-
-    REPEAT 35
-        sta WSYNC
-    REPEND
-    ldx #0         ; scanline counter
-    stx VBLANK
+    ldx #35                       ; VBLANK
+VBlankLoop:
     sta WSYNC
+    dex
+    bne VBlankLoop
+    lda #0
+    sta VBLANK
+    sta WSYNC
+
+; Skip some scanlines to center the board vertically (will get rid of this
+; if the mutlipalyer gets implemented)
+
+    ldx #50
+CenterGridLoop:
+    sta WSYNC
+    dex
+    bne CenterGridLoop
 
 ;;;;;;;;;;;;;;;;
 ;; GRID SETUP ;;
@@ -490,9 +501,6 @@ DrawBottomSeparatorLoop:
     sta PF0
     sta PF1
     sta PF2
-
-
-
 
 Overscan:
     lda #%01000010
@@ -669,9 +677,9 @@ ClearMergeBitLoop:
 
 
 EndShift:
-    ; FIXME we surely spent more than a scanline, figure out something
-    ; (idea: each processed tile in a single scanline; clear loop in
-    ;  its own scanline as well)
+    ; FIXME we surely spent more than a scanline (around 15 between both
+    ; this and the random tile), figure out something (idea: each processed
+    ; tile in a single scanline; clear loop in its own scanline as well)
     sta WSYNC
 
 ;;;;;;;;;;;;;;;;;;;;;
