@@ -138,8 +138,10 @@
     PROCESSOR 6502
     INCLUDE "vcs.h"
 
-    ORG $F000                ; We'll include the tile bitmaps at a known and
-    INCLUDE "graphics.asm"   ; aligned address, so we only calculate the LSB
+    ORG $F800                ; 2K cart
+    INCLUDE "graphics.asm"   ; Put the tiles in the beginning so they stay
+                             ; page-aligned (meaning the address' MSB does
+                             ; not change and we only calculate the LSB)
 
 ;;;;;;;;;
 ;; RAM ;;
