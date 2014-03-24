@@ -23,9 +23,8 @@ Based on the [original 2048 game][1] Copyright (c) 2014 Gabriele Cirulli
 
 ### Missing for a "1.0" release:
 
-- Centering the board horizontally
-- Review scanline counts
 - RESET switch
+- Review scanline counts
 
 ### Feature Creep Corner
 

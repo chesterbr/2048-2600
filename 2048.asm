@@ -230,11 +230,13 @@ GridPF1 = $01
 GridPF2Tile  = %10011001 ; Grid has "holes" for numbers
 GridPF2Space = %11111111 ; but is solid between the tiles
 
-JoyP0Up    = %11100000      ; Masks to bit-test SWCHA for joystick movement
+JoyP0Up    = %11100000      ; Masks to test SWCHA for joystick movement
 JoyP0Down  = %11010000
 JoyP0Left  = %10110000
 JoyP0Right = %01110000
 JoyMaskP0  = %11110000
+
+GameResetMask = %00000001   ; Mask to test SWCHB for GAME RESET switch
 
 ; Amount to add to move to a direciton in the cell grid, in two's complement
 RightShiftVector = $01     ;  1
@@ -733,7 +735,19 @@ EndRandomTile:
     inc RandomNumber         ; Feed the random number generator
     sta WSYNC
 
-    REPEAT 27
+;;;;;;;;;;;;;;;;;;;;;;
+;; CONSOLE SWITCHES ;;
+;;;;;;;;;;;;;;;;;;;;;;
+
+    lda SWCHB
+    bit GameResetMask
+    bne NoReset
+    jmp Initialize
+
+NoReset:
+    sta WSYNC
+
+    REPEAT 26
         sta WSYNC
     REPEND
     jmp StartFrame
