@@ -23,11 +23,10 @@ Based on the [original 2048 game][1] Copyright (c) 2014 Gabriele Cirulli
 
 ### Missing for a "1.0" release:
 
-- RESET switch
-- Review scanline counts
 
 ### Feature Creep Corner
 
+- Review scanline counts
 - Different colors for each tile value
 - Animation for new tiles
 - Animation for merged tiles
