@@ -90,12 +90,12 @@ Tiles:
 .    X  X X
 .    X  X X
 .    X  X X
-.    X  X X
-.    XX XXX
-.    XX   X
-.    XX   X
-.    XX   X
-.    XX   X
+.    X  XXX
+.    XXX  X
+.    X X  X
+.    X X  X
+.    X X  X
+.    XXX  X
 .
 
 .
