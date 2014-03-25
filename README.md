@@ -23,6 +23,11 @@ Released under the [MIT license][9].
 
 If you have any questions/comments/rants, feel free to contact me on [Twitter][7], on my [blog][8] or simply [write an e-mail][10]!
 
+## Special Thanks
+
+- [Lucas][30], [Diogo][31], and [Bani][32], for support and suggestions.
+- All the nice people at the [AtariAge forum][http://atariage.com/forums/forum/50-atari-2600-programming/], for making lots of information available.
+
 ## Pending
 ### Known Bugs
 - Very infrequently we have an extra scanline. Seems to happen when lots of tiles are shifted.
@@ -52,3 +57,6 @@ managed to do it, but I'm missing a few cycles to change the colors quick enough
 [12]: http://chester.me/2014/03/2048-2600
 [13]: http://stella.sourceforge.net/
 [14]: http://harmony.atariage.com/Site/Harmony.html
+[30]: http://github.com/lxfontes
+[31]: http://github.com/dterror
+[32]: http://github.com/bani
