@@ -404,7 +404,7 @@ NoWall1:
     bne NoWall2
     lda #Wall2Repl
 NoWall2:
-    cmp #Wall3Repl
+    cmp #Wall3
     bne CheckIfCellIsEmpty
     lda #Wall3Repl
 
