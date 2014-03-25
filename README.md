@@ -15,7 +15,7 @@ You will need either an emulator (e.g., [Stella][13]) or a real Atari with an [H
 
 ## Bulding / Development info
 
-All the juicy details are included on [2048.asm][3], the main source file, and a bit more nicely formatted [here][12].
+All the juicy details are included on [2048.asm][3] (the main source file), and a bit more nicely formatted [on this blog post][12].
 
 ## Author and License
 
@@ -58,7 +58,7 @@ managed to do it, but I'm missing a few cycles to change the colors quick enough
 [9]: https://github.com/gabrielecirulli/2048/blob/master/LICENSE.txt
 [10]: mailto:cd@pobox.com?subject=2048+2600
 [11]: http://phenomist.wordpress.com/2048-variants/
-[12]: http://chester.me/2014/03/2048-2600
+[12]: http://chester.me/archives/2014/03/2048-2600-the-2048-game-for-the-Atari-2600/
 [13]: http://stella.sourceforge.net/
 [14]: http://harmony.atariage.com/Site/Harmony.html
 [30]: http://github.com/lxfontes
