@@ -5,6 +5,10 @@ A port of the [2048][1] game to the [Atari 2600][4].
 
 (because there aren't enough [versions of this game]([11])! :laughing:)
 
+## Screenshot
+
+![2048 2600](http://i.imgur.com/Cmagc1T "2048 2600")
+
 ## Running
 
 You will need either an emulator (e.g., [Stella][13]) or a real Atari with an [Harmony][14] cart. In either case, just download [2048.rom][2] and run as a normal Atari game.
