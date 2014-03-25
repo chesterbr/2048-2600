@@ -17,12 +17,13 @@ You will need either an emulator (e.g., Stella) or a real Atari with an Harmony 
 
 Open Source under the [MIT license.](9)
 
-Based on the [original 2048 game][1] Copyright (c) 2014 Gabriele Cirulli
+Based on the [original 2048 game][1] by Gabriele Cirulli
 
-## Bugs
+## Pending
+### Known Bugs
 - Very infrequently we have an extra scanline
 
-## Things that I (or anyone else) could do
+## Things that would be nice
 
 - Animation for new tiles
 - Animation for merged tiles
