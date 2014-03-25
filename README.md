@@ -11,7 +11,13 @@ A port of the [2048][1] game to the [Atari 2600][4].
 
 ## Running
 
-You will need either an emulator (e.g., [Stella][13]) or a real Atari with an [Harmony][14] cart. In either case, just download [2048.rom][2] and run as a normal Atari game.
+### On the Browser
+
+Thanks to [James Friend][34], you can [play 2048 2600 on your browser][35]!
+
+### On an emulator or real Atari
+
+I suggest using [Stella][13], or a real Atari with an [Harmony][14] cart. In either case, just download [2048.rom][2] and run as a normal Atari game.
 
 ## Bulding / Development info
 
@@ -69,4 +75,6 @@ managed to do it, but I'm missing a few cycles to change the colors quick enough
 [31]: http://github.com/dterror
 [32]: http://github.com/bani
 [33]: http://atariage.com/forums/forum/50-atari-2600-programming/
+[34]: https://github.com/jsdf
+[35]: http://jamesfriend.com.au/2600/2048/
 [40]: https://github.com/unwiredben
