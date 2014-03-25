@@ -168,9 +168,12 @@ OffsetBeingPushed  = $AB     ; Position in cell table of the tile being pushed
 ShiftEndOffset     = $AC     ; Position in which we'll stop processing
 CurrentValue       = $AD     ; Value of that tile
 
-RandomNumber       = $AE     ; Frame count based RNG, used to add tiles
+; Frame count based RNG, used to add tiles and title screen rainbow
+RandomNumber       = $AE
 
-
+; Timer length for VBLANK and Overscan
+VBlankTime64T      = 44
+OverscanTime64T    = 36
 
 ;;;;;;;;;;;;;;;
 ;; CONSTANTS ;;
@@ -323,14 +326,9 @@ TitleTiles:
     .byte  0,  0,  0,  0, CellSentinel
     .byte  0,  0, 16, 17, CellSentinel
 
-
-
-    ;jmp StartFrame
-
 ;;;;;;;;;;;;;;
 ;; NEW GAME ;;
 ;;;;;;;;;;;;;;
-
 
 StartNewGame:
     lda #GridColor                ; Show the grid separator
@@ -362,7 +360,7 @@ InitCellTableLoop2Inner:
 ;;;;;;;;;;;;;;;;;
 
 StartFrame:
-    lda #%00000010                ; VSYNC
+    lda #%00000010         ; VSYNC
     sta VSYNC
     REPEAT 3
         sta WSYNC
@@ -371,13 +369,86 @@ StartFrame:
     sta VSYNC
     sta WSYNC
 
-    ldx #35                       ; VBLANK
-VBlankLoop:
-    sta WSYNC
-    dex
-    bne VBlankLoop
+    lda #VBlankTime64T     ; VBLANK - will be ended by a timer instead of
+    sta TIM64T             ; scanline count because of variable time routines
     lda #0
     sta VBLANK
+
+;;;;;;;;;;;;;;;;;;;;;
+;; NEW RANDOM TILE ;;
+;;;;;;;;;;;;;;;;;;;;;
+
+    lda GameState
+    cmp #AddingRandomTile
+    bne EndRandomTile        ; No need for a random tile now
+
+; Pick a random cell from a number from 0..15, mapping those that would
+; hit sentinels on the right side ("walls") to the ones not covered by the range
+
+    lda RandomNumber
+    and #$0F
+    cmp #Wall1
+    bne NoWall1
+    lda #Wall1Repl
+NoWall1:
+    cmp #Wall2
+    bne NoWall2
+    lda #Wall2Repl
+NoWall2:
+    cmp #Wall3Repl
+    bne CheckIfCellIsEmpty
+    lda #Wall3Repl
+
+CheckIfCellIsEmpty:
+    tax                       ; Cell offset now in X
+    lda CellTable+FirstDataCellOffset,x
+    cmp #CellEmpty
+    bne EndRandomTile         ; Tile not empty, let's try again next frame
+
+PickTileType:
+    ldy RandomNumber
+    cpy #ThresholdForTile4
+    bcc PickTile2
+    lda #Cell4                ; >= threshold, A will be a "4" tile
+    jmp AddTileToCell
+PickTile2:
+    lda #Cell2                ; < threshold, A will be a "2" tile
+
+AddTileToCell:
+    sta CellTable+FirstDataCellOffset,x
+    lda #WaitingJoyRelease
+    sta GameState             ; Wait for joystick release before a new shift
+
+EndRandomTile:
+    inc RandomNumber         ; Feed the random number generator
+    lda GameState
+    cmp #TitleScreen
+    bne NoRainbow
+    lda RandomNumber
+    sta COLUP0
+    eor #$FF
+    sta COLUP1
+NoRainbow:
+
+;;;;;;;;;;;;;;;;;;;;;;
+;; CONSOLE SWITCHES ;;
+;;;;;;;;;;;;;;;;;;;;;;
+
+    lda SWCHB
+    bit GameResetMask
+    bne NoReset
+    jmp StartNewGame
+
+NoReset:
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; REMAINDER OF VBLANK ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+WaitForVBlankEndLoop:
+    lda INTIM                ; Wait until the timer signals the actual end
+    bne WaitForVBlankEndLoop ; of the VBLANK period
+
     sta WSYNC
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -551,7 +622,7 @@ DrawBottomSeparatorLoop:
 ;; BOTTOM SPACE BELOW GRID ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    ldx #53
+    ldx #52
 SpaceBelowGridLoop:
     sta WSYNC
     dex
@@ -563,7 +634,7 @@ SpaceBelowGridLoop:
 
     lda #%01000010           ; Disable output
     sta VBLANK
-    lda #36                  ; We'll use a timer instead of scanline counts
+    lda #OverscanTime64T     ; We'll use a timer instead of scanline counts
     sta TIM64T               ; because the shift routine has variable time
 
 ;;;;;;;;;;;;;;;;;;;;
@@ -742,80 +813,13 @@ ClearMergeBitLoop:
 
 EndShift:
 
-;;;;;;;;;;;;;;;;;;;;;
-;; NEW RANDOM TILE ;;
-;;;;;;;;;;;;;;;;;;;;;
-
-    lda GameState
-    cmp #AddingRandomTile
-    bne EndRandomTile        ; No need for a random tile now
-
-; Pick a random cell from a number from 0..15, mapping those that would
-; hit sentinels on the right side ("walls") to the ones not covered by the range
-
-    lda RandomNumber
-    and #$0F
-    cmp #Wall1
-    bne NoWall1
-    lda #Wall1Repl
-NoWall1:
-    cmp #Wall2
-    bne NoWall2
-    lda #Wall2Repl
-NoWall2:
-    cmp #Wall3Repl
-    bne CheckIfCellIsEmpty
-    lda #Wall3Repl
-
-CheckIfCellIsEmpty:
-    tax                       ; Cell offset now in X
-    lda CellTable+FirstDataCellOffset,x
-    cmp #CellEmpty
-    bne EndRandomTile         ; Tile not empty, let's try again next frame
-
-PickTileType:
-    ldy RandomNumber
-    cpy #ThresholdForTile4
-    bcc PickTile2
-    lda #Cell4                ; >= threshold, A will be a "4" tile
-    jmp AddTileToCell
-PickTile2:
-    lda #Cell2                ; < threshold, A will be a "2" tile
-
-AddTileToCell:
-    sta CellTable+FirstDataCellOffset,x
-    lda #WaitingJoyRelease
-    sta GameState             ; Wait for joystick release before a new shift
-
-EndRandomTile:
-    inc RandomNumber         ; Feed the random number generator
-    lda GameState
-    cmp #TitleScreen
-    bne NoRainbow
-    lda RandomNumber
-    sta COLUP0
-    eor #$FF
-    sta COLUP1
-NoRainbow:
-
-;;;;;;;;;;;;;;;;;;;;;;
-;; CONSOLE SWITCHES ;;
-;;;;;;;;;;;;;;;;;;;;;;
-
-    lda SWCHB
-    bit GameResetMask
-    bne NoReset
-    jmp StartNewGame
-
-NoReset:
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; REMAINDER OF OVERSCAN ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-WaitForOverscanLoop:
-    lda INTIM                ; Wait until the timer signals the actual end
-    bne WaitForOverscanLoop  ; of the overscan period
+WaitForOverscanEndLoop:
+    lda INTIM                   ; Wait until the timer signals the actual end
+    bne WaitForOverscanEndLoop  ; of the overscan period
 
     sta WSYNC
     jmp StartFrame
