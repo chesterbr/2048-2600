@@ -15,7 +15,7 @@ You will need either an emulator (e.g., [Stella][13]) or a real Atari with an [H
 
 ## Bulding / Development info
 
-All the juicy details are included on [2048.asm][3] (the main source file), and a bit more nicely formatted [on this blog post][12].
+All the juicy details are included on [2048.asm][3] (the main source file), and a bit easier to read [on this blog post][12].
 
 ## Author and License
 
