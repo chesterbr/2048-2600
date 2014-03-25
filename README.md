@@ -27,6 +27,10 @@ Released under the [MIT license][9].
 
 If you have any questions/comments/rants, feel free to contact me on [Twitter][7], on my [blog][8] or simply [write an e-mail][10]!
 
+## Contributors
+
+- [Ben Combee][40] - Fixed the bug that prevented the last tile from being picked;
+
 ## Special Thanks
 
 - [Lucas][30], [Diogo][31], and [Bani][32], for support and suggestions.
@@ -65,3 +69,4 @@ managed to do it, but I'm missing a few cycles to change the colors quick enough
 [31]: http://github.com/dterror
 [32]: http://github.com/bani
 [33]: http://atariage.com/forums/forum/50-atari-2600-programming/
+[40]: https://github.com/unwiredben
