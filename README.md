@@ -3,7 +3,7 @@
 
 A port of the [2048][1] game to the [Atari 2600][4].
 
-(because there aren't enough [versions of this game][11])! :laughing:)
+(because there aren't enough [versions of this game][11])! :laughing:
 
 ## Screenshot
 
