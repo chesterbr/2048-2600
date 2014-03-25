@@ -197,7 +197,6 @@ Shifting          = 1
 AddingRandomTile  = 2
 WaitingJoyRelease = 3
 
-
 CellTableYOffset     = 5  ; How much we +/- to move up/down a line on the table
 
 ; Some relative positions on the cell table
@@ -273,7 +272,6 @@ CleanStack:
     sta COLUP0
     sta COLUP1
 
-
 InitialValues:
     lda #$F0
     sta HMBL
@@ -281,12 +279,13 @@ InitialValues:
     sta REFP0
     sta REFP1
 
-;;;;;;;;;;;;;;;;;;;;;;
-;; GRID PREPARATION ;;
-;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;
+;; NEW GAME SETUP ;;
+;;;;;;;;;;;;;;;;;;;;
 
-; Pre-fill the tile bitmap MSBS, so we only have to
+; Pre-fill the tile address MSBs, so we only have to
 ; figure out the LSBs for each tile
+StartNewGame:
     lda #>Tiles
     ldx #7
 FillMsbLoop:
@@ -303,7 +302,6 @@ InitCellTableLoop1:
     sta CellTable,x
     dex
     bpl InitCellTableLoop1
-
     ldx #LastDataCellOffset       ; Last non-sentinel cell offset
     lda #CellEmpty
 InitCellTableLoop2Outer:
@@ -316,6 +314,10 @@ InitCellTableLoop2Inner:
     dex                           ; skip 1 cell (side sentinel)
     cpx #FirstDataCellOffset
     bcs InitCellTableLoop2Outer   ; and continue until we pass the top-left cell
+
+; Start the game with a random tile
+    lda #AddingRandomTile
+    sta GameState
 
 ;;;;;;;;;;;;;;;;;
 ;; FRAME START ;;
@@ -378,11 +380,11 @@ SpaceAboveGridLoop:
     sta NUSIZ1  ; (3)
 
     REPEAT 9    ; (27 = 9x3) ; Position P0 close to the beginning of 1st tile
-        bit $00
+        bit $80
     REPEND
     sta RESP0   ; (3)
 
-    bit $00     ; (3)        ; and P1 close to the beginning of the second
+    bit $80     ; (3)        ; and P1 close to the beginning of the second
     sta RESP1   ; (3)
     sta WSYNC
 
@@ -589,7 +591,6 @@ EndJoyCheck:
     beq SetDirection           ; Have to do this instead of bne EndShift
     jmp EndShift               ; because the routine is > 128 bytes!
 
-
 ; Outer loop will traverse the entire cell map in the *opposite* order of the
 ; movement, that is, from the beginning for right/up and from end for left/down,
 ; so they stack and merge as expected. Let's setup these parameters
@@ -612,6 +613,9 @@ NegativeVector:
 SetShiftParams:
     sty ShiftEndOffset
     sta TilesLoopDirection
+
+    lda #WaitingJoyRelease     ; We won't add tiles unless some move happens
+    sta GameState
 
 ; Notice that X will keep the offset of the cell being processed (main loop),
 ; and will advance until we have no more processable tile positions.
@@ -645,8 +649,6 @@ StartPush:
     lda CellTable,x
     sta CurrentValue              ; Keep the current tile's value
     stx OffsetBeingPushed         ; Initialize inner loop counter
-    ; lda #0                        ; We'll count the number of pushes done
-    ; sta MoveCounter               ; to compensate the
 
 PushCurrentTile:                  ; Inner loop begins here
     clc
@@ -656,9 +658,12 @@ PushCurrentTile:                  ; Inner loop begins here
     lda CellTable,y          ; A <= value of next cell in the vector direction
 
     cmp #CellEmpty
-    bne NotEmpty             ; We won't move if the cell is not empty
+    bne NotEmpty             ; We won't move if the next cell is not empty
 
 MoveCurrentToNext:
+    lda #AddingRandomTile    ; If we move at least once, we can add a tile
+    sta GameState
+
     lda CurrentValue
     sta CellTable,y          ; Set next cell to current value
 
@@ -677,7 +682,7 @@ NotEmpty:
     cmp #MergedMask
     bcs AdvanceToNext        ; Can't merge if next cell has already been merged
     cmp CurrentValue
-    bne AdvanceToNext;       ; Only merge if value matches
+    bne AdvanceToNext        ; Only merge if value matches
 
 Merge:
     inc CurrentValue         ; Multiply by 2 in log (that is, add 1 to exponent)
@@ -687,8 +692,6 @@ Merge:
     jmp MoveCurrentToNext    ; Move the multiplied cell to the target position
 
 FinishShift:
-    lda #AddingRandomTile    ; Upon finishing the shift, we'll add a new tile
-    sta GameState
 
     ldx FirstDataCellOffset  ; Clear the merged bit (restoring tile values)
 ClearMergeBitLoop:
@@ -756,7 +759,7 @@ EndRandomTile:
     lda SWCHB
     bit GameResetMask
     bne NoReset
-    jmp Initialize
+    jmp StartNewGame
 
 NoReset:
 
