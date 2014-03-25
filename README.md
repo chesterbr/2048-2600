@@ -15,7 +15,7 @@ A port of the [2048][1] game to the [Atari 2600][4].
 
 Thanks to [James Friend][34], you can [play 2048 2600 on your browser][35]!
 
-### On an emulator or real Atari
+### On an Emulator or a Real Atari
 
 I suggest using [Stella][13], or a real Atari with an [Harmony][14] cart. In either case, just download [2048.rom][2] and run as a normal Atari game.
 
