@@ -340,14 +340,15 @@ VBlankLoop:
     sta VBLANK
     sta WSYNC
 
-; Skip some scanlines to center the board vertically (will get rid of this
-; if the mutlipalyer gets implemented)
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; TOP SPACE ABOVE GRID ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    ldx #50
-CenterGridLoop:
+    ldx #52
+SpaceAboveGridLoop:
     sta WSYNC
     dex
-    bne CenterGridLoop
+    bne SpaceAboveGridLoop
 
 ;;;;;;;;;;;;;;;;
 ;; GRID SETUP ;;
@@ -506,9 +507,24 @@ DrawBottomSeparatorLoop:
     sta PF1
     sta PF2
 
-Overscan:
-    lda #%01000010
-    sta VBLANK               ; Disable output
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; BOTTOM SPACE BELOW GRID ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ldx #53
+SpaceBelowGridLoop:
+    sta WSYNC
+    dex
+    bne SpaceBelowGridLoop
+
+;;;;;;;;;;;;;;
+;; OVERSCAN ;;
+;;;;;;;;;;;;;;
+
+    lda #%01000010           ; Disable output
+    sta VBLANK
+    lda #36                  ; We'll use a timer instead of scanline counts
+    sta TIM64T               ; because the shift routine has variable time
 
 ;;;;;;;;;;;;;;;;;;;;
 ;; INPUT CHECKING ;;
@@ -563,7 +579,6 @@ CheckJoyRelease:
     sta GameState
 
 EndJoyCheck:
-    sta WSYNC
 
 ;;;;;;;;;;;;;;;;;
 ;; SHIFT BOARD ;;
@@ -571,12 +586,15 @@ EndJoyCheck:
 
     lda GameState
     cmp #Shifting
-    bne EndShift               ; Not shifting
+    beq SetDirection           ; Have to do this instead of bne EndShift
+    jmp EndShift               ; because the routine is > 128 bytes!
+
 
 ; Outer loop will traverse the entire cell map in the *opposite* order of the
 ; movement, that is, from the beginning for right/up and from end for left/down,
 ; so they stack and merge as expected. Let's setup these parameters
 
+SetDirection:
     lda ShiftVector
     bmi NegativeVector
 
@@ -627,6 +645,8 @@ StartPush:
     lda CellTable,x
     sta CurrentValue              ; Keep the current tile's value
     stx OffsetBeingPushed         ; Initialize inner loop counter
+    ; lda #0                        ; We'll count the number of pushes done
+    ; sta MoveCounter               ; to compensate the
 
 PushCurrentTile:                  ; Inner loop begins here
     clc
@@ -679,12 +699,7 @@ ClearMergeBitLoop:
     cpx #LastDataCellOffset+1
     bne ClearMergeBitLoop
 
-
 EndShift:
-    ; FIXME we surely spent more than a scanline (around 15 between both
-    ; this and the random tile), figure out something (idea: each processed
-    ; tile in a single scanline; clear loop in its own scanline as well)
-    sta WSYNC
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; NEW RANDOM TILE ;;
@@ -733,7 +748,6 @@ AddTileToCell:
 
 EndRandomTile:
     inc RandomNumber         ; Feed the random number generator
-    sta WSYNC
 
 ;;;;;;;;;;;;;;;;;;;;;;
 ;; CONSOLE SWITCHES ;;
@@ -745,11 +759,16 @@ EndRandomTile:
     jmp Initialize
 
 NoReset:
-    sta WSYNC
 
-    REPEAT 26
-        sta WSYNC
-    REPEND
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; REMAINDER OF OVERSCAN ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+WaitForOverscanLoop:
+    lda INTIM                ; Wait until the timer signals the actual end
+    bne WaitForOverscanLoop  ; of the overscan period
+
+    sta WSYNC
     jmp StartFrame
 
     ORG $FFFA
