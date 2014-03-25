@@ -189,7 +189,6 @@ CellSentinel = 127          ; Can't use bit 7 (will be wiped)
 MergedMask      = %10000000 ; Bit 7 is set to flag tiles as merged
 ClearMergedMask = %01111111 ; We need to reset to get to original values
 
-
 ; The original 2048 puts 2s with 90% probability and 4s with 10%. Our random
 ; number range between 0-255, so we'll put a 4 if it is above 256 * 0.9 ≅ 230
 ThresholdForTile4 = 230
@@ -434,12 +433,18 @@ NoRainbow:
 ;; CONSOLE SWITCHES ;;
 ;;;;;;;;;;;;;;;;;;;;;;
 
-    lda SWCHB
+    lda SWCHB                 ; GAME RESET restarts the game at any time
     bit GameResetMask
-    bne NoReset
-    jmp StartNewGame
+    beq Restart
 
-NoReset:
+    lda GameState             ; Fire button only restarts at title screen
+    cmp #TitleScreen
+    bne NoRestart
+    lda INPT4
+    bmi NoRestart
+Restart:
+    jmp StartNewGame
+NoRestart:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; REMAINDER OF VBLANK ;;
