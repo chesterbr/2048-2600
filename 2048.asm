@@ -132,6 +132,16 @@
 ; easy to check in upcoming pushed blocks without needing extra memory.
 ; We'll only miss the animations, but we can't have everything.
 ;
+;
+; Timings
+; -------
+;
+; Since the shift routine can have unpredictable timing (and I wanted some
+; freedom to move routines between overscan and vertical blank), I decided
+; to use RIOT timers instead of the traditional scanline count. It is not
+; the usual route for games (as they tend to squeeze every scanline of
+; processing), but for this project it worked fine.
+;
 ; [1] http://skilldrick.github.io/easy6502/
 ; [2] http://www.slideshare.net/chesterbr/atari-2600programming
 
