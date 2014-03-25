@@ -192,10 +192,11 @@ ClearMergedMask = %01111111 ; We need to reset to get to original values
 ThresholdForTile4 = 230
 
 ; Possible values of GameState
-WaitingJoyPress   = 0
-Shifting          = 1
-AddingRandomTile  = 2
-WaitingJoyRelease = 3
+TitleScreen       = 0
+WaitingJoyPress   = 1
+Shifting          = 2
+AddingRandomTile  = 3
+WaitingJoyRelease = 4
 
 CellTableYOffset     = 5  ; How much we +/- to move up/down a line on the table
 
@@ -218,8 +219,9 @@ Wall1Repl = 16
 Wall2Repl = 17
 Wall3Repl = 18
 
-GridColor = $12
-TileColor = $EC
+GridColor   = $12
+NoGridColor = $00
+TileColor   = $EC
 
 TileHeight = 11          ; Tiles have 11 scanlines (and are in graphics.asm)
 GridSeparatorHeight = 10
@@ -265,12 +267,6 @@ CleanStack:
 
     lda #%00000001      ; Playfield (grid) in mirror (symmetrical) mode
     sta CTRLPF
-    lda #GridColor
-    sta COLUPF
-
-    lda #TileColor      ; Players will be used to draw the tiles (numbers)
-    sta COLUP0
-    sta COLUP1
 
 InitialValues:
     lda #$F0
@@ -279,13 +275,12 @@ InitialValues:
     sta REFP0
     sta REFP1
 
-;;;;;;;;;;;;;;;;;;;;
-;; NEW GAME SETUP ;;
-;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;
+;; PROGRAM SETUP ;;
+;;;;;;;;;;;;;;;;;;;
 
 ; Pre-fill the tile address MSBs, so we only have to
 ; figure out the LSBs for each tile
-StartNewGame:
     lda #>Tiles
     ldx #7
 FillMsbLoop:
@@ -302,6 +297,49 @@ InitCellTableLoop1:
     sta CellTable,x
     dex
     bpl InitCellTableLoop1
+
+;;;;;;;;;;;;;;;;;;
+;; TITLE SCREEN ;;
+;;;;;;;;;;;;;;;;;;
+
+    lda #TitleScreen
+    sta GameState
+
+    lda #NoGridColor                         ; Hide the grid separator
+    sta COLUPF
+
+    ldx #LastDataCellOffset                  ; Print using tiles
+TitleScreenLoop:
+    lda TitleTiles-FirstDataCellOffset,x
+    sta CellTable,x
+    dex
+    cpx #FirstDataCellOffset-1
+    bne TitleScreenLoop
+    jmp StartFrame
+
+TitleTiles:
+    .byte  1, 14,  2,  3, CellSentinel
+    .byte  1, 15, 14, 14, CellSentinel
+    .byte  0,  0,  0,  0, CellSentinel
+    .byte  0,  0, 16, 17, CellSentinel
+
+
+
+    ;jmp StartFrame
+
+;;;;;;;;;;;;;;
+;; NEW GAME ;;
+;;;;;;;;;;;;;;
+
+
+StartNewGame:
+    lda #GridColor                ; Show the grid separator
+    sta COLUPF
+
+    lda #TileColor                ; Tiles (players) with fixed color
+    sta COLUP0
+    sta COLUP1
+
     ldx #LastDataCellOffset       ; Last non-sentinel cell offset
     lda #CellEmpty
 InitCellTableLoop2Outer:
@@ -751,6 +789,14 @@ AddTileToCell:
 
 EndRandomTile:
     inc RandomNumber         ; Feed the random number generator
+    lda GameState
+    cmp #TitleScreen
+    bne NoRainbow
+    lda RandomNumber
+    sta COLUP0
+    eor #$FF
+    sta COLUP1
+NoRainbow:
 
 ;;;;;;;;;;;;;;;;;;;;;;
 ;; CONSOLE SWITCHES ;;

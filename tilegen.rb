@@ -182,6 +182,55 @@ Tiles:
 .      X X
 .      X XXX
 
+TitleScreenTiles:
+.
+.     XXXX
+.    XX  XX
+.    XX  XX
+.    XX  XX
+.    XX  XX
+.    XX  XX
+.    XX  XX
+.    XX  XX
+.     XXXX
+.
+
+.
+.     XXXX
+.    XX  XX
+.    XX
+.    XXXXX
+.    XXXXXX
+.    XX  XX
+.    XX  XX
+.    XX  XX
+.     XXXX
+.
+
+.
+.    XX X
+.    X  XXX
+.    X  X X
+.    XX X X
+.
+.        X
+.        XX
+.        X
+.        XX
+.
+
+.
+.     X  XX
+.    X X X
+.    XX   X
+.     XX XX
+.
+.     X  XX
+.    X X X
+.    XX  X
+.     XX X
+.
+
 END
 
 def write_asm_file(glyphs)

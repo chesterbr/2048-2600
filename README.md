@@ -19,22 +19,19 @@ Open Source under the [MIT license.](9)
 
 Based on the [original 2048 game][1] Copyright (c) 2014 Gabriele Cirulli
 
-## Pending Stuff
+## Bugs
+- Very infrequently we have an extra scanline
 
-### Missing for a "1.0" release:
+## Things that I (or anyone else) could do
 
-
-### Feature Creep Corner
-
-- Review scanline counts
-- Different colors for each tile value
 - Animation for new tiles
 - Animation for merged tiles
-- Title screen
 - Counting points
 - Time-based multiplayer like [Emil Stolarsky's][6]
 - Turn-based multiplayer (survival-style), one or two players
 - An easter egg (after all, Atari 2600 [pioneered][5] the genre)
+- Different colors for each tile value (this one is **hard**, I've almost
+managed to do it, but I'm missing two cycles)
 
 ## Bulding and other development info
 
