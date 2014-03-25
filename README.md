@@ -7,7 +7,7 @@ A port of the [2048][1] game to the [Atari 2600][4].
 
 ## Screenshot
 
-![2048 2600](http://i.imgur.com/Cmagc1T "2048 2600")
+![2048 2600](http://i.imgur.com/Cmagc1T.png "2048 2600")
 
 ## Running
 
