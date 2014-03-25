@@ -30,7 +30,7 @@ If you have any questions/comments/rants, feel free to contact me on [Twitter][7
 ## Special Thanks
 
 - [Lucas][30], [Diogo][31], and [Bani][32], for support and suggestions.
-- All the nice people at the [AtariAge forum][http://atariage.com/forums/forum/50-atari-2600-programming/], for making lots of information available.
+- All the nice people at the [AtariAge forum][33], for making lots of information available.
 
 ## Pending
 ### Known Bugs
@@ -64,3 +64,4 @@ managed to do it, but I'm missing a few cycles to change the colors quick enough
 [30]: http://github.com/lxfontes
 [31]: http://github.com/dterror
 [32]: http://github.com/bani
+[33]: http://atariage.com/forums/forum/50-atari-2600-programming/
