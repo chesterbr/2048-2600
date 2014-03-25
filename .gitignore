@@ -1,6 +1,7 @@
 # Local DASM
 dasm*
 *.h
+2048.stella
 
 # Mac stuff
 .DS_Store
