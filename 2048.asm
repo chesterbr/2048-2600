@@ -206,15 +206,13 @@ ClearMergedMask = %01111111 ; We need to reset to get to original values
 ; number range between 0-255, so we'll put a 4 if it is above 256 * 0.9 ≅ 230
 ThresholdForTile4 = 230
 
-; Possible values of GameState
-TitleScreen       = 0
-WaitingJoyPress   = 1
-Shifting          = 2
-AddingRandomTile  = 3
-ShowingMerged     = 5
-WaitingJoyRelease = 7
-
-CellTableYOffset     = 5  ; How much we +/- to move up/down a line on the table
+; Values of GameState (it's a state machine!)
+TitleScreen       = 0  ; => AddingRandomTitle
+AddingRandomTile  = 1  ; => WaitingJoyRelease
+WaitingJoyRelease = 2  ; => WaitingJoyPress
+WaitingJoyPress   = 3  ; => Shifting
+Shifting          = 4  ; => ShowingMerged OR WaitingJoyRelease
+ShowingMerged     = 5  ; => AddingRandomTile
 
 ; Some relative positions on the cell table
 ; Notice how we go to last data cell: Top-Left + 3 rows down + 3 columns right
@@ -222,6 +220,7 @@ CellTableYOffset     = 5  ; How much we +/- to move up/down a line on the table
 FirstDataCellOffset = 5
 LastDataCellOffset  = FirstDataCellOffset + (CellTableYOffset * 3) + 3
 LastCellOffset      = LastDataCellOffset + CellTableYOffset
+CellTableYOffset    = 5  ; How much we +/- to move up/down a line on the table
 
 ; Position of sentinels that might be picked as random tiles (for being the
 ; ones on the right "wall", see drawing on header), relative to the
@@ -435,13 +434,11 @@ PickTile2:
 
 AddTileToCell:
     sta CellTable+FirstDataCellOffset,x
-    lda #ShowingMerged        ; Display some animation on the merged tiles
-    sta GameState
-    lda #AnimationFrames      ; for a short number of frames
-    sta AnimationCounter
+    lda #WaitingJoyRelease    ; Tile added, player can play as soon as they
+    sta GameState             ; release the joystick
 
 EndRandomTile:
-    inc RandomNumber         ; Feed the random number generator
+    inc RandomNumber          ; Feed the random number generator
     lda GameState
     cmp #TitleScreen
     bne NoRainbow
@@ -468,18 +465,18 @@ Restart:
     jmp StartNewGame
 NoRestart:
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; DECREASE "SHOW MERGED" COUNTER AND CLEANUP IF DONE ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ANIMATION COUNTER MANAGEMENT ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     lda GameState
     cmp #ShowingMerged
-    bne EndMergeCounter           ; Not displaying merged tiles
-    dec AnimationCounter          ; Decrease counter
-    bne EndMergeCounter
-    lda #WaitingJoyRelease        ; Enough fo a show, let's move on
+    bne ResetAnimationCounter     ; No animation: just keep the counter ready
+    dec AnimationCounter          ; Animating: decrease counter
+    bne DoneCounterManagement
+    lda #AddingRandomTile         ; Animation done, let's add a tile...
     sta GameState
-    ldx FirstDataCellOffset       ; Clear merged bit from tiles
+    ldx FirstDataCellOffset       ; ...and clear merged bit from tiles
 ClearMergeBitLoop:
     lda CellTable,x
     and #ClearMergedMask
@@ -487,7 +484,10 @@ ClearMergeBitLoop:
     inx
     cpx #LastDataCellOffset+1
     bne ClearMergeBitLoop
-EndMergeCounter:
+ResetAnimationCounter:
+    lda #AnimationFrames          ; Keep this counter initialized
+    sta AnimationCounter          ; for the next animation
+DoneCounterManagement:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; REMAINDER OF VBLANK ;;
@@ -780,8 +780,8 @@ SetShiftParams:
     sty ShiftEndOffset
     sta TilesLoopDirection
 
-    lda #WaitingJoyRelease     ; We won't add tiles unless some move happens
-    sta GameState
+    lda #WaitingJoyRelease     ; We won't animate or add tiles unless some
+    sta GameState              ; movement happens
 
 ; Notice that X will keep the offset of the cell being processed (main loop),
 ; and will advance until we have no more processable tile positions.
@@ -827,8 +827,8 @@ PushCurrentTile:                  ; Inner loop begins here
     bne NotEmpty             ; We won't move if the next cell is not empty
 
 MoveCurrentToNext:
-    lda #AddingRandomTile    ; If we move at least once, we can add a tile
-    sta GameState
+    lda #ShowingMerged       ; If we move at least once, we can show merged
+    sta GameState            ; animations (if any), which will add the new tile
 
     lda CurrentValue
     sta CellTable,y          ; Set next cell to current value

@@ -48,7 +48,6 @@ If you have any questions/comments/rants, feel free to contact me on [Twitter][7
 
 ### Things that would be nice
 
-- Animation for new tiles
 - Counting points
 - Time-based multiplayer like [Emil Stolarsky's][6]
 - Turn-based multiplayer (survival-style), one or two players
