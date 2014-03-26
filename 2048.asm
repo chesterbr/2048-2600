@@ -181,9 +181,12 @@ CurrentValue       = $AD     ; Value of that tile
 ; Frame count based RNG, used to add tiles and title screen rainbow
 RandomNumber       = $AE
 
-; Timer length for VBLANK and Overscan
-VBlankTime64T      = 44
-OverscanTime64T    = 36
+; Counter to display "animated" tiles (merged / new)
+AnimationCounter   = $AF
+
+; Added to the tile address to produce the merge animation
+AnimationDelta     = $B0
+
 
 ;;;;;;;;;;;;;;;
 ;; CONSTANTS ;;
@@ -208,7 +211,8 @@ TitleScreen       = 0
 WaitingJoyPress   = 1
 Shifting          = 2
 AddingRandomTile  = 3
-WaitingJoyRelease = 4
+ShowingMerged     = 5
+WaitingJoyRelease = 7
 
 CellTableYOffset     = 5  ; How much we +/- to move up/down a line on the table
 
@@ -243,6 +247,8 @@ GridPF1 = $01
 GridPF2Tile  = %10011001 ; Grid has "holes" for numbers
 GridPF2Space = %11111111 ; but is solid between the tiles
 
+AnimationFrames = 11     ; Time limit for merged tile / new tile animations
+
 JoyP0Up    = %11100000      ; Masks to test SWCHA for joystick movement
 JoyP0Down  = %11010000
 JoyP0Left  = %10110000
@@ -250,6 +256,10 @@ JoyP0Right = %01110000
 JoyMaskP0  = %11110000
 
 GameResetMask = %00000001   ; Mask to test SWCHB for GAME RESET switch
+
+; Timer length for VBLANK and Overscan
+VBlankTime64T      = 44
+OverscanTime64T    = 36
 
 ; Amount to add to move to a direciton in the cell grid, in two's complement
 RightShiftVector = $01     ;  1
@@ -425,8 +435,10 @@ PickTile2:
 
 AddTileToCell:
     sta CellTable+FirstDataCellOffset,x
-    lda #WaitingJoyRelease
-    sta GameState             ; Wait for joystick release before a new shift
+    lda #ShowingMerged        ; Display some animation on the merged tiles
+    sta GameState
+    lda #AnimationFrames      ; for a short number of frames
+    sta AnimationCounter
 
 EndRandomTile:
     inc RandomNumber         ; Feed the random number generator
@@ -455,6 +467,27 @@ NoRainbow:
 Restart:
     jmp StartNewGame
 NoRestart:
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; DECREASE "SHOW MERGED" COUNTER AND CLEANUP IF DONE ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    lda GameState
+    cmp #ShowingMerged
+    bne EndMergeCounter           ; Not displaying merged tiles
+    dec AnimationCounter          ; Decrease counter
+    bne EndMergeCounter
+    lda #WaitingJoyRelease        ; Enough fo a show, let's move on
+    sta GameState
+    ldx FirstDataCellOffset       ; Clear merged bit from tiles
+ClearMergeBitLoop:
+    lda CellTable,x
+    and #ClearMergedMask
+    sta CellTable,x
+    inx
+    cpx #LastDataCellOffset+1
+    bne ClearMergeBitLoop
+EndMergeCounter:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; REMAINDER OF VBLANK ;;
@@ -531,9 +564,16 @@ GridRowPreparation:
     ldy #0             ; (2)   ; Y = column (*2) counter
 
 UpdateTileBitmapAddressLoop:
-    ldx CellCursor     ; (3)   ; A = current grid cell value.
-    lda CellTable,x    ; (4)
+    ldx CellCursor       ; (3) ; A = current grid cell value.
+    lda CellTable,x      ; (4)
+    ldx #0
+    cmp #MergedMask
+    bcc MultiplyBy11
+    and #ClearMergedMask ; (2) ; Clear the merged bit
+    ldx AnimationCounter
 
+MultiplyBy11:
+    stx AnimationDelta
     ; We need to multiply the value ("n") by 11 (TileHeight).
     sta TempVar1       ; (3)   ; TempVar1 = value
 
@@ -547,6 +587,8 @@ UpdateTileBitmapAddressLoop:
     adc TempVar1       ; (2)
     adc TempVar1       ; (2)   ; A = 3*value
     adc TempVar2       ; (2)   ; A = 3*value + 8*value = 11*value
+    sec
+    sbc AnimationDelta ; (2)   ; If animating, scroll to the new value
 
 MultiplicationDone:
     sta RowTileBmp1,y  ; (5)   ; Store LSB (MSB is fixed)
@@ -816,15 +858,6 @@ Merge:
     jmp MoveCurrentToNext    ; Move the multiplied cell to the target position
 
 FinishShift:
-
-    ldx FirstDataCellOffset  ; Clear the merged bit (restoring tile values)
-ClearMergeBitLoop:
-    lda CellTable,x
-    and #ClearMergedMask
-    sta CellTable,x
-    inx
-    cpx #LastDataCellOffset+1
-    bne ClearMergeBitLoop
 
 EndShift:
 
