@@ -7,7 +7,7 @@
 ; © 2014 Carlos Duarte do Nascimento (chesterbr)
 ; <cd@pobox.com | @chesterbr | http://chester.me>
 ;
-; Latest version:
+; Latest version, contributors and general info:
 ;   http://github.com/chesterbr/2048-2060
 ;
 

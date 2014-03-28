@@ -31,7 +31,7 @@ All the juicy details are included on [2048.asm][3] (the main source file), and 
 
 © 2014 by Carlos Duarte do Nascimento (Chester)
 
-Portions contributed by other authors, see below.
+Portions contributed and © by their respective authors, see below.
 
 Based on the [original 2048 game][1] by Gabriele Cirulli
 
@@ -88,4 +88,4 @@ managed to do it, but I'm missing a few cycles to change the colors quick enough
 [36]: http://javatari.org/games/2048
 [37]: https://github.com/ppeccin
 [40]: https://github.com/unwiredben
-[41]: http://svolli.org
+[41]: http://svolli.org/atari2600/
