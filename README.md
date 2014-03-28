@@ -13,7 +13,9 @@ A port of the [2048][1] game to the [Atari 2600][4].
 
 ### On the Browser
 
-Thanks to [James Friend][34], you can [play 2048 2600 on your browser][35]!
+There are (at least) two options to run it without installing any software:
+- [Play it on JSMESS][35] (thanks to [James Friend][34])
+- [Play it on javatari][36] (thanks to javatari creator, [Paulo Augusto Peccin][37])
 
 ### On an Emulator or a Real Atari
 
@@ -83,5 +85,7 @@ managed to do it, but I'm missing a few cycles to change the colors quick enough
 [33]: http://atariage.com/forums/forum/50-atari-2600-programming/
 [34]: https://github.com/jsdf
 [35]: http://jamesfriend.com.au/2600/2048/
+[36]: http://javatari.org/games/2048
+[37]: https://github.com/ppeccin
 [40]: https://github.com/unwiredben
 [41]: http://svolli.org
