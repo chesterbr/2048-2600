@@ -19,6 +19,8 @@ Thanks to [James Friend][34], you can [play 2048 2600 on your browser][35]!
 
 I suggest using [Stella][13], or a real Atari with an [Harmony][14] cart. In either case, just download [2048.rom][2] and run as a normal Atari game.
 
+If you are running on a PAL Atari/TV, put the TV TYPE switch on the B•W position.
+
 ## Bulding / Development info
 
 All the juicy details are included on [2048.asm][3] (the main source file), and a bit easier to read [on this blog post][12].
@@ -27,15 +29,21 @@ All the juicy details are included on [2048.asm][3] (the main source file), and 
 
 © 2014 by Carlos Duarte do Nascimento (Chester)
 
+Portions contributed by other authors, see below.
+
 Based on the [original 2048 game][1] by Gabriele Cirulli
 
-Released under the [MIT license][9].
+This software is released under the [MIT license][9], and pull requests are
+welcome. Keep in mind that by submitting a pull request, you are agreeing
+to the licensing terms and licensing your contribution under them (without
+undermining any of your other rights).
 
 If you have any questions/comments/rants, feel free to contact me on [Twitter][7], on my [blog][8] or simply [write an e-mail][10]!
 
 ## Contributors
 
 - [Ben Combee][40] - Fixed the bug that prevented the last tile from being picked;
+- [SvOlli (Sven Oliver Moll)][41] - Implemented PAL mode using the TV TYPE switch.
 
 ## Special Thanks
 
@@ -76,3 +84,4 @@ managed to do it, but I'm missing a few cycles to change the colors quick enough
 [34]: https://github.com/jsdf
 [35]: http://jamesfriend.com.au/2600/2048/
 [40]: https://github.com/unwiredben
+[41]: http://svolli.org

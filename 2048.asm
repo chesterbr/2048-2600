@@ -153,6 +153,15 @@
                              ; page-aligned (meaning the address' MSB does
                              ; not change and we only calculate the LSB)
 
+VBlankTime64T:               ; Running on PAL mode (enabled by the TV TYPE
+   .byte 44,74               ; switch on the "B•W" position) requires the
+OverscanTime64T:             ; color codes and the timing of VBlank/Overscan
+   .byte 35,65               ; to change. These parameters are listed here:
+GridColor:                   ; first NTSC, then PAL. Thanks SvOlli!
+   .byte $12,$22
+TileColor:
+   .byte $EC,$3C
+
 ;;;;;;;;;
 ;; RAM ;;
 ;;;;;;;;;
@@ -234,9 +243,7 @@ Wall1Repl = 16
 Wall2Repl = 17
 Wall3Repl = 18
 
-GridColor   = $12
 NoGridColor = $00
-TileColor   = $EC
 
 TileHeight = 11          ; Tiles have 11 scanlines (and are in graphics.asm)
 GridSeparatorHeight = 10
@@ -254,11 +261,8 @@ JoyP0Left  = %10110000
 JoyP0Right = %01110000
 JoyMaskP0  = %11110000
 
+ColSwitchMask = %00001000   ; Mask to test SWCHB for TV TYPE switch
 GameResetMask = %00000001   ; Mask to test SWCHB for GAME RESET switch
-
-; Timer length for VBLANK and Overscan
-VBlankTime64T      = 44
-OverscanTime64T    = 36
 
 ; Amount to add to move to a direciton in the cell grid, in two's complement
 RightShiftVector = $01     ;  1
@@ -349,10 +353,16 @@ TitleTiles:
 ;;;;;;;;;;;;;;
 
 StartNewGame:
-    lda #GridColor                ; Show the grid separator
-    sta COLUPF
+    ldx #$00                     ; Colors change between NTSC and PAL
+    lda #ColSwitchMask
+    bit SWCHB
+    bne NoColorPALAdjust
+    inx
+NoColorPALAdjust:
+    lda GridColor,x
+    sta COLUPF                    ; Show the grid separator
 
-    lda #TileColor                ; Tiles (players) with fixed color
+    lda TileColor,x               ; Tiles (players) with fixed color
     sta COLUP0
     sta COLUP1
 
@@ -387,10 +397,16 @@ StartFrame:
     sta VSYNC
     sta WSYNC
 
-    lda #VBlankTime64T     ; VBLANK - will be ended by a timer instead of
-    sta TIM64T             ; scanline count because of variable time routines
-    lda #0
-    sta VBLANK
+    ldx #$00
+    lda #ColSwitchMask     ; VBLANK start
+    bit SWCHB
+    bne NoVBlankPALAdjust  ; "Color" => NTSC; "B•W" = PAL
+    inx                    ; (this ajust will appear a few times in the code)
+NoVBlankPALAdjust:
+    lda VBlankTime64T,x
+    sta TIM64T             ; Use a RIOT timer (with the proper value) instead
+    lda #0                 ; of counting scanlines (since we only care about
+    sta VBLANK             ; the overall time)
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; NEW RANDOM TILE ;;
@@ -691,8 +707,14 @@ SpaceBelowGridLoop:
 
     lda #%01000010           ; Disable output
     sta VBLANK
-    lda #OverscanTime64T     ; We'll use a timer instead of scanline counts
-    sta TIM64T               ; because the shift routine has variable time
+    ldx #$00
+    lda #ColSwitchMask
+    bit SWCHB
+    bne NoOverscanPALAdjust
+    inx
+NoOverscanPALAdjust:
+    lda OverscanTime64T,x    ; Use a timer adjusted to the color system's TV
+    sta TIM64T               ; timings to end Overscan, same as VBLANK
 
 ;;;;;;;;;;;;;;;;;;;;
 ;; INPUT CHECKING ;;
