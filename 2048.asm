@@ -572,9 +572,9 @@ Restart:
     jmp StartNewGame
 NoRestart:
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ANIMATION COUNTER MANAGEMENT ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; POST-SHIFT MANAGEMENT (MERGE ANIMATNO & SCORE UPDATE) ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     lda GameState
     cmp #ShowingMerged
@@ -584,13 +584,17 @@ NoRestart:
     lda #AddingRandomTile         ; Animation done, let's add a tile...
     sta GameState
     ldx FirstDataCellOffset       ; ...and clear merged bit from tiles
-ClearMergeBitLoop:
+CountScoreLoop:
     lda CellTable,x
+    cmp #MergedMask
+    bmi ClearMergedBit            ; Not merged, just clear the bit
+    inc ScoreBCD+2                ; FIXME sum instead of just increment
+ClearMergedBit:
     and #ClearMergedMask
     sta CellTable,x
     inx
     cpx #LastDataCellOffset+1
-    bne ClearMergeBitLoop
+    bne CountScoreLoop
 ResetAnimationCounter:
     lda #AnimationFrames          ; Keep this counter initialized
     sta AnimationCounter          ; for the next animation
