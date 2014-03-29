@@ -219,10 +219,25 @@ nine
   .byte $72 ; |.XXX..X.|
   .byte $7E ; |.XXXXXX.|
 
+; Score values of each tile, in BCD
+TileValuesBCD:
+  .byte $00,$04
+  .byte $00,$08
+  .byte $00,$16
+  .byte $00,$32
+  .byte $00,$64
+  .byte $01,$28
+  .byte $02,$56
+  .byte $05,$12
+  .byte $10,$24
+  .byte $20,$48
+  .byte $40,$96
+  .byte $81,$92
+
 VBlankTime64T:               ; Running on PAL mode (enabled by the TV TYPE
- .byte 44,74               ; switch on the "B•W" position) requires the
+   .byte 44,74               ; switch on the "B•W" position) requires the
 OverscanTime64T:             ; color codes and the timing of VBlank/Overscan
- .byte 35,65               ; to change. These parameters are listed here:
+   .byte 35,65               ; to change. These parameters are listed here:
 GridColor:                   ; first NTSC, then PAL. Thanks SvOlli!
  .byte $12,$22
 TileColor:
@@ -588,13 +603,33 @@ CountScoreLoop:
     lda CellTable,x
     cmp #MergedMask
     bmi ClearMergedBit            ; Not merged, just clear the bit
-    inc ScoreBCD+2                ; FIXME sum instead of just increment
-ClearMergedBit:
+CountScore:
     and #ClearMergedMask
+    asl
+    tay                           ; Now Y = offset of tile values table
+    sed                           ; We'll work in BCD
+
+    clc
+    lda TileValuesBCD-3,y
+    adc ScoreBCD+2
+    sta ScoreBCD+2                ; score "low byte" += table LSB
+
+    lda TileValuesBCD-4,y
+    adc ScoreBCD+1
+    sta ScoreBCD+1                ; score "middle byte" += table MSB + carry
+
+    lda #0
+    adc ScoreBCD
+    sta ScoreBCD                  ; score "high byte" += carry
+
+    cld
+    lda CellTable,x               ; Restore original value
+ClearMergedBit:
+    and #ClearMergedMask          ; Clear bit and store
     sta CellTable,x
     inx
     cpx #LastDataCellOffset+1
-    bne CountScoreLoop
+    bne CountScoreLoop            ; Go to the next, up to the last tile
 ResetAnimationCounter:
     lda #AnimationFrames          ; Keep this counter initialized
     sta AnimationCounter          ; for the next animation
@@ -614,7 +649,7 @@ WaitForVBlankEndLoop:
 ;; TOP SPACE ABOVE SCORE ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    ldx #51
+    ldx #41
 SpaceAboveLoop:
     sta WSYNC
     dex
@@ -914,7 +949,7 @@ DrawBottomSeparatorLoop:
 ;; BOTTOM SPACE BELOW GRID ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    ldx #52
+    ldx #50
 SpaceBelowGridLoop:
     sta WSYNC
     dex
