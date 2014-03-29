@@ -314,6 +314,8 @@ RowTileBmp2 = $B2            ; bitmap that will be drawn on the current/next
 RowTileBmp3 = $B4            ; row of the grid, and must be updated before
 RowTileBmp4 = $B6            ; the row is drawn
 
+RowTileColor = $B8
+
 
 ;;;;;;;;;;;;;;;
 ;; BOOTSTRAP ;;
@@ -508,7 +510,9 @@ EndRandomTile:
     inc RandomNumber          ; Feed the random number generator
     lda GameState
     cmp #TitleScreen
-    bne NoRainbow
+    ; FIXME temp
+    jmp NoRainbow
+    ;bne NoRainbow
     lda RandomNumber
     sta COLUP0
     eor #$FF
@@ -724,6 +728,20 @@ ScoreCleanup:                ; 1 scanline
 ;; GRID SETUP ;;
 ;;;;;;;;;;;;;;;;
 
+; TEMP organize
+    ; lda #VerticalDelay       ; (2) ; Needed for precise timing of GRP0/GRP1
+    ; sta VDELP0               ; (3)
+
+    lda #$50
+    sta RowTileColor
+    lda #$30
+    sta RowTileColor+1
+    lda #$10
+    sta RowTileColor+2
+    lda #$70
+    sta RowTileColor+3
+
+
 ; Separator scanline 1:
 ; configure grid playfield
     lda #GridPF0
@@ -827,30 +845,53 @@ MultiplicationDone:
 ;; GRID ROW ;;
 ;;;;;;;;;;;;;;
 
+   ; sta WSYNC
+   ; REPEAT 12
+   ;   nop
+   ; REPEND
+   ; sta WSYNC
+
+
+    ldx RowTileColor+3
+    txs
+
+
 RowScanline:
-    sta WSYNC
-    REPEAT 7     ; (12 = 6x12)
-        nop
-    REPEND
+    ldx RowTileColor+2    ; (3)
+    lda RowTileColor      ; (3)
+    sta COLUP0            ; (3)
+    sta WSYNC             ; (3)
+    lda RowTileColor+1    ; (3)
+    sta COLUP1            ; (3)
+    lda (RowTileBmp4),y   ; (5)
+    sta TempVar1          ; (3)
 
-    lda (RowTileBmp1),y
-    sta GRP0
-    lda (RowTileBmp2),y
-    sta GRP1
+    ;sta TempVar1 ; 3
+    nop
+    nop                   ; (2)
 
-    nop
-    nop
-    nop
-    nop
+
+    lda (RowTileBmp1),y   ; (5)
+    sta GRP0              ; (3)
+    lda (RowTileBmp2),y   ; (5)
+    sta GRP1              ; (3)
+    lda (RowTileBmp3),y   ; (5)
+
+    sta GRP0              ; (3)
+    ;.byte $8D,GRP0,0 ; (4) ; sta GRP0 (absolute)
+
+    lda TempVar1          ; (3)
+    stx COLUP0            ; (3)
+    sta GRP1              ; (3)
+    tsx                   ; (2)
+    stx COLUP1            ; (3)
+
+;    nop                   ; (2)
 
 ; Here is the magic that makes A B A B into A B C D: when the beam is between
 ; the first copies and the second copies of the players, change the bitmaps:
-    lda (RowTileBmp3),y
-    sta GRP0
-    lda (RowTileBmp4),y
-    sta GRP1
-    dey
-    bpl RowScanline
+    dey                   ; (2)
+    bpl RowScanline       ; (2*)
     sta WSYNC
 
 ; Go to the next row (or finish grid)
