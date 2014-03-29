@@ -424,6 +424,12 @@ InitCellTableLoop2Inner:
     cpx #FirstDataCellOffset
     bcs InitCellTableLoop2Outer   ; and continue until we pass the top-left cell
 
+; Reset score
+    lda #0
+    sta ScoreBCD
+    sta ScoreBCD+1
+    sta ScoreBCD+2
+
 ; Start the game with a random tile
     lda #AddingRandomTile
     sta GameState
