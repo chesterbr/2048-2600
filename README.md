@@ -7,7 +7,7 @@ A port of the [2048][1] game to the [Atari 2600][4].
 
 ## Screenshot
 
-![2048 2600](http://i.imgur.com/Cmagc1T.png "2048 2600")
+![2048 2600](http://chester.me/img/2014/03/2048-2600.png "2048 2600")
 
 ## Running
 
@@ -58,12 +58,12 @@ If you have any questions/comments/rants, feel free to contact me on [Twitter][7
 
 ### Things that would be nice
 
-- Counting points
 - Time-based multiplayer like [Emil Stolarsky's][6]
 - Turn-based multiplayer (survival-style), one or two players
 - An easter egg (after all, Atari 2600 [pioneered][5] the genre)
 - Different colors for each tile value (this one is **hard**. I've almost
 managed to do it, but I'm missing a few cycles to change the colors quick enough)
+- A better font for the scores? Better tiles?
 
 [1]: https://github.com/gabrielecirulli/2048
 [2]: https://github.com/chesterbr/2048-2600/blob/master/2048.bin?raw=true
