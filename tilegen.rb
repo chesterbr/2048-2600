@@ -231,6 +231,68 @@ TitleScreenTiles:
 .     XX X
 .
 
+Digits
+zero
+  .byte $7E ; |.XXXXXX.|
+  .byte $72 ; |.XXX..X.|
+  .byte $72 ; |.XXX..X.|
+  .byte $72 ; |.XXX..X.|
+  .byte $7E ; |.XXXXXX.|
+one
+  .byte $1C ; |...XXX..|
+  .byte $1C ; |...XXX..|
+  .byte $1C ; |...XXX..|
+  .byte $1C ; |...XXX..|
+  .byte $1C ; |...XXX..|
+two
+  .byte $7E ; |.XXXXXX.|
+  .byte $40 ; |.X......|
+  .byte $7E ; |.XXXXXX.|
+  .byte $0E ; |....XXX.|
+  .byte $7E ; |.XXXXXX.|
+three
+  .byte $7E ; |.XXXXXX.|
+  .byte $4E ; |.X..XXX.|
+  .byte $1C ; |...XXX..|
+  .byte $4E ; |.X..XXX.|
+  .byte $7E ; |.XXXXXX.|
+four
+  .byte $1C ; |...XXX..|
+  .byte $1C ; |...XXX..|
+  .byte $7E ; |.XXXXXX.|
+  .byte $5C ; |.X.XXX..|
+  .byte $7C ; |.XXXXX..|
+five
+  .byte $7E ; |.XXXXXX.|
+  .byte $0E ; |....XXX.|
+  .byte $7E ; |.XXXXXX.|
+  .byte $40 ; |.X......|
+  .byte $7E ; |.XXXXXX.|
+six
+  .byte $7E ; |.XXXXXX.|
+  .byte $4E ; |.X..XXX.|
+  .byte $7E ; |.XXXXXX.|
+  .byte $40 ; |.X......|
+  .byte $7E ; |.XXXXXX.|
+seven
+  .byte $0E ; |....XXX.|
+  .byte $0E ; |....XXX.|
+  .byte $0E ; |....XXX.|
+  .byte $4E ; |.X..XXX.|
+  .byte $7E ; |.XXXXXX.|
+eight
+  .byte $7E ; |.XXXXXX.|
+  .byte $4E ; |.X..XXX.|
+  .byte $7E ; |.XXXXXX.|
+  .byte $72 ; |.XXX..X.|
+  .byte $7E ; |.XXXXXX.|
+nine
+  .byte $7E ; |.XXXXXX.|
+  .byte $02 ; |......X.|
+  .byte $7E ; |.XXXXXX.|
+  .byte $72 ; |.XXX..X.|
+  .byte $7E ; |.XXXXXX.|
+
 END
 
 def write_asm_file(glyphs)

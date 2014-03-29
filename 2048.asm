@@ -147,157 +147,42 @@
 
     PROCESSOR 6502
     INCLUDE "vcs.h"
-
-;;;;;;;;;;;;;;;;;;;;;
-;; GRAPHICS TABLES ;;
-;;;;;;;;;;;;;;;;;;;;;
-
     ORG $F800                ; 2K cart
-    INCLUDE "graphics.asm"   ; Put the tiles in the beginning so they stay
-                             ; page-aligned (meaning the address' MSB does
-                             ; not change and we only calculate the LSB)
 
-Digits
-zero
-  .byte $7E ; |.XXXXXX.|
-  .byte $72 ; |.XXX..X.|
-  .byte $72 ; |.XXX..X.|
-  .byte $72 ; |.XXX..X.|
-  .byte $7E ; |.XXXXXX.|
-one
-  .byte $1C ; |...XXX..|
-  .byte $1C ; |...XXX..|
-  .byte $1C ; |...XXX..|
-  .byte $1C ; |...XXX..|
-  .byte $1C ; |...XXX..|
-two
-  .byte $7E ; |.XXXXXX.|
-  .byte $40 ; |.X......|
-  .byte $7E ; |.XXXXXX.|
-  .byte $0E ; |....XXX.|
-  .byte $7E ; |.XXXXXX.|
-three
-  .byte $7E ; |.XXXXXX.|
-  .byte $4E ; |.X..XXX.|
-  .byte $1C ; |...XXX..|
-  .byte $4E ; |.X..XXX.|
-  .byte $7E ; |.XXXXXX.|
-four
-  .byte $1C ; |...XXX..|
-  .byte $1C ; |...XXX..|
-  .byte $7E ; |.XXXXXX.|
-  .byte $5C ; |.X.XXX..|
-  .byte $7C ; |.XXXXX..|
-five
-  .byte $7E ; |.XXXXXX.|
-  .byte $0E ; |....XXX.|
-  .byte $7E ; |.XXXXXX.|
-  .byte $40 ; |.X......|
-  .byte $7E ; |.XXXXXX.|
-six
-  .byte $7E ; |.XXXXXX.|
-  .byte $4E ; |.X..XXX.|
-  .byte $7E ; |.XXXXXX.|
-  .byte $40 ; |.X......|
-  .byte $7E ; |.XXXXXX.|
-seven
-  .byte $0E ; |....XXX.|
-  .byte $0E ; |....XXX.|
-  .byte $0E ; |....XXX.|
-  .byte $4E ; |.X..XXX.|
-  .byte $7E ; |.XXXXXX.|
-eight
-  .byte $7E ; |.XXXXXX.|
-  .byte $4E ; |.X..XXX.|
-  .byte $7E ; |.XXXXXX.|
-  .byte $72 ; |.XXX..X.|
-  .byte $7E ; |.XXXXXX.|
-nine
-  .byte $7E ; |.XXXXXX.|
-  .byte $02 ; |......X.|
-  .byte $7E ; |.XXXXXX.|
-  .byte $72 ; |.XXX..X.|
-  .byte $7E ; |.XXXXXX.|
+;;;;;;;;;;;;;;;;;
+;; DATA TABLES ;;
+;;;;;;;;;;;;;;;;;
+
+; Tile and digit graphics go in the beginning of the cart to keep page-aligned
+; (that is, the address' MSB never changes and we only calculate the LSB)
+
+    INCLUDE "graphics.asm"                                                            ;
 
 ; Score values of each tile, in BCD
 TileValuesBCD:
-  .byte $00,$04
-  .byte $00,$08
-  .byte $00,$16
-  .byte $00,$32
-  .byte $00,$64
-  .byte $01,$28
-  .byte $02,$56
-  .byte $05,$12
-  .byte $10,$24
-  .byte $20,$48
-  .byte $40,$96
-  .byte $81,$92
+    .byte $00,$04
+    .byte $00,$08
+    .byte $00,$16
+    .byte $00,$32
+    .byte $00,$64
+    .byte $01,$28
+    .byte $02,$56
+    .byte $05,$12
+    .byte $10,$24
+    .byte $20,$48
+    .byte $40,$96
+    .byte $81,$92
 
-VBlankTime64T:               ; Running on PAL mode (enabled by the TV TYPE
-   .byte 44,74               ; switch on the "B•W" position) requires the
-OverscanTime64T:             ; color codes and the timing of VBlank/Overscan
-   .byte 35,65               ; to change. These parameters are listed here:
-GridColor:                   ; first NTSC, then PAL. Thanks SvOlli!
- .byte $12,$22
+; Values that change if we are on PAL mode (TV TYPE switch "B•W" position)
+; Order: NTSC, PAL. (thanks @SvOlli)
+VBlankTime64T:
+   .byte 44,74
+OverscanTime64T:
+   .byte 35,65
+GridColor:
+   .byte $12,$22
 TileColor:
- .byte $EC,$3C
-
-
-
-;;;;;;;;;
-;; RAM ;;
-;;;;;;;;;
-
-
-CellTable = $80              ; 16 cells + 13 sentinels = 29 (0x1D) bytes
-
-CellCursor = $9D ;($80+$1D)  ; Loop counter for address of the "current" cell
-
-; Frame count based RNG, used to add tiles and title screen rainbow
-RandomNumber       = $9E
-
-; Counter to display "animated" tiles (merged / new)
-AnimationCounter   = $9F
-
-; Added to the tile address to produce the merge animation
-AnimationDelta     = $A0
-
-; 6-digit score is stored in BCD (each nibble = 1 digit => 3 bytes)
-ScoreBCD           = $A1
-
-;:: SPACE ($A4, $A5)
-
-; $A6-$A7 have different uses in various kernel routines:
-
-TempVar1 = $A6               ; General use variable
-TempVar2 = $A7               ; General use variable
-
-LineCounter    = $A6         ; Counts lines while drawing the score
-TempDigitBmp   = $A7         ; Stores intermediate part of 6-digit score
-
-GameState = $A8;
-
-; Tile shift routine variables
-ShiftVector        = $A9     ; What to add to get to "next" tile in current direction
-TilesLoopDirection = $AA     ; +1 for left/up, -1 for right/down
-OffsetBeingPushed  = $AB     ; Position in cell table of the tile being pushed
-ShiftEndOffset     = $AC     ; Position in which we'll stop processing
-CurrentValue       = $AD     ; Value of that tile
-
-; $B0-$BB will point to the address of the graphic for each
-; digit (6x2 bytes) or tile (4x2 bytes) currently being drawn
-
-; FIXME have just one rowtilebmp, maybe TileBmpPtr
-
-DigitBmpPtr = $B0
-RowTileBmp1 = $B0            ; Each of these points to the address of the
-RowTileBmp2 = $B2            ; bitmap that will be drawn on the current/next
-RowTileBmp3 = $B4            ; row of the grid, and must be updated before
-RowTileBmp4 = $B6            ; the row is drawn
-
-
-
+   .byte $EC,$3C
 
 ;;;;;;;;;;;;;;;
 ;; CONSTANTS ;;
@@ -375,6 +260,60 @@ RightShiftVector = $01     ;  1
 LeftShiftVector  = $FF     ; -1
 DownShiftVector  = $05     ;  5
 UpShiftVector    = $FB     ; -5
+
+
+;;;;;;;;;
+;; RAM ;;
+;;;;;;;;;
+
+; The table has 16 cells + 13 sentinels = 29 (0x1D) bytes
+CellTable = $80
+
+; Loop counter for address of the "current" cell
+CellCursor = $9D ;($80+$1D)  ;
+
+; Frame count based RNG, used to add tiles and title screen rainbow
+RandomNumber       = $9E
+
+; Counter to display "animated" tiles (merged / new)
+AnimationCounter   = $9F
+
+; Added to the tile address to produce the merge animation
+AnimationDelta     = $A0
+
+; 6-digit score is stored in BCD (each nibble = 1 digit => 3 bytes)
+ScoreBCD           = $A1
+
+;:: SPACE ($A4, $A5)
+
+; $A6-$A7 have different uses in various kernel routines:
+
+TempVar1 = $A6               ; General use variable
+TempVar2 = $A7               ; General use variable
+
+LineCounter    = $A6         ; Counts lines while drawing the score
+TempDigitBmp   = $A7         ; Stores intermediate part of 6-digit score
+
+GameState = $A8;
+
+; Tile shift routine variables
+ShiftVector        = $A9     ; What to add to get to "next" tile in current direction
+TilesLoopDirection = $AA     ; +1 for left/up, -1 for right/down
+OffsetBeingPushed  = $AB     ; Position in cell table of the tile being pushed
+ShiftEndOffset     = $AC     ; Position in which we'll stop processing
+CurrentValue       = $AD     ; Value of that tile
+
+; $B0-$BB will point to the address of the graphic for each
+; digit (6x2 bytes) or tile (4x2 bytes) currently being drawn
+
+; FIXME have just one rowtilebmp, maybe TileBmpPtr
+
+DigitBmpPtr = $B0
+RowTileBmp1 = $B0            ; Each of these points to the address of the
+RowTileBmp2 = $B2            ; bitmap that will be drawn on the current/next
+RowTileBmp3 = $B4            ; row of the grid, and must be updated before
+RowTileBmp4 = $B6            ; the row is drawn
+
 
 ;;;;;;;;;;;;;;;
 ;; BOOTSTRAP ;;
@@ -587,9 +526,9 @@ Restart:
     jmp StartNewGame
 NoRestart:
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; POST-SHIFT MANAGEMENT (MERGE ANIMATNO & SCORE UPDATE) ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; POST-SHIFT MANAGEMENT (MERGE ANIMATION & SCORE UPDATE) ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     lda GameState
     cmp #ShowingMerged
@@ -649,7 +588,7 @@ WaitForVBlankEndLoop:
 ;; TOP SPACE ABOVE SCORE ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    ldx #41
+    ldx #40
 SpaceAboveLoop:
     sta WSYNC
     dex
@@ -660,25 +599,25 @@ SpaceAboveLoop:
 ;; SCORE SETUP ;;
 ;;;;;;;;;;;;;;;;;
 
-; Score scanline 1:
-; ; configure grid playfield
-;     lda #GridPF0
-;     sta PF0
-;     lda #GridPF1
-;     sta PF1
-;     lda #GridPF2Space        ; Space between rows
-;     sta PF2
+; Score setup scanline 1:
+    lda GameState
+    cmp #TitleScreen
+    bne YesScore             ; No score on title screen
 
-; ; point cell cursor to the first data cell
-;     lda #FirstDataCellOffset
-;     sta CellCursor
-
-;     sta WSYNC
+NoScore:
+    ldx #12
+ScoreSpaceLoop:
+    sta WSYNC
+    dex
+    bne ScoreSpaceLoop
+    jmp ScoreCleanup
 
 
-; Score scanlines 1-2
+; Score setup scanlines 2-3:
 ; player graphics triplicated and positioned like this: P0 P1 P0 P1 P0 P1
 
+YesScore:
+    sta WSYNC
     lda #PlayerThreeCopies   ; (2)
     sta NUSIZ0               ; (3)
     sta NUSIZ1               ; (3)
@@ -701,7 +640,7 @@ SpaceAboveLoop:
     sta WSYNC
     sta HMOVE         ; (3)
 
-; Score scanlines 3-4
+; Score setup scanlines 4-5
 ; set the graphic pointers for each score digit
 
     ldy #2            ; (2)  ; Score byte counter (source)
@@ -742,10 +681,10 @@ ScorePtrLoop:
 ;; SCORE ;;
 ;;;;;;;;;;;
 
-    ldy #4
+    ldy #4                   ; 5 scanlines
     sty LineCounter
 DrawScoreLoop:
-    ldy LineCounter
+    ldy LineCounter          ; 6-digit loop is heavily inspired on Berzerk's
     lda (DigitBmpPtr),y
     sta GRP0
     sta WSYNC
@@ -767,7 +706,7 @@ DrawScoreLoop:
     dec LineCounter
     bpl DrawScoreLoop
 
-ScoreCleanup:
+ScoreCleanup:                ; 1 scanline
     lda #0
     sta VDELP0
     sta VDELP1
@@ -819,12 +758,8 @@ ScoreCleanup:
     sta HMOVE
     sta WSYNC
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; GRID ROW PREPARATION ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ; Separator scanlines 5-8:
-; calculate tile address LSB for the 4 tiles, one per scanline
+; set graphic pointers' LSBs to the 4 tiles
 
 GridRowPreparation:
     ldy #0             ; (2)   ; Y = column (*2) counter
