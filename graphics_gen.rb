@@ -241,63 +241,63 @@ TitleScreenTiles:
 
 Digits:
 ! XXXXXX !
-! XXX  X !
-! XXX  X !
-! XXX  X !
+! XX  XX !
+! XX  XX !
+! XX  XX !
 ! XXXXXX !
 
-!   XXX  !
-!   XXX  !
-!   XXX  !
-!   XXX  !
-!   XXX  !
-
-! XXXXXX !
-! X      !
-! XXXXXX !
-!    XXX !
+!   XX   !
+! XXXX   !
+!   XX   !
+!   XX   !
 ! XXXXXX !
 
 ! XXXXXX !
-! X  XXX !
-!   XXX  !
-! X  XXX !
+!     XX !
 ! XXXXXX !
-
-!   XXX  !
-!   XXX  !
-! XXXXXX !
-! X XXX  !
-! XXXXX  !
-
-! XXXXXX !
-!    XXX !
-! XXXXXX !
-! X      !
+! XX     !
 ! XXXXXX !
 
 ! XXXXXX !
-! X  XXX !
-! XXXXXX !
-! X      !
-! XXXXXX !
-
-!    XXX !
-!    XXX !
-!    XXX !
-! X  XXX !
+!     XX !
+!   XXXX !
+!     XX !
 ! XXXXXX !
 
+! XX  XX !
+! XX  XX !
 ! XXXXXX !
-! X  XXX !
+!     XX !
+!     XX !
+
 ! XXXXXX !
-! XXX  X !
+! XX     !
+! XXXXXX !
+!     XX !
 ! XXXXXX !
 
 ! XXXXXX !
-!      X !
+! XX     !
 ! XXXXXX !
-! XXX  X !
+! XX  XX !
+! XXXXXX !
+
+! XXXXXX !
+!     XX !
+!     XX !
+!     XX !
+!     XX !
+
+! XXXXXX !
+! XX  XX !
+! XXXXXX !
+! XX  XX !
+! XXXXXX !
+
+! XXXXXX !
+! XX  XX !
+! XXXXXX !
+!     XX !
 ! XXXXXX !
 
 END
