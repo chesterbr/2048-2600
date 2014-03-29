@@ -148,35 +148,118 @@
     PROCESSOR 6502
     INCLUDE "vcs.h"
 
+;;;;;;;;;;;;;;;;;;;;;
+;; GRAPHICS TABLES ;;
+;;;;;;;;;;;;;;;;;;;;;
+
     ORG $F800                ; 2K cart
     INCLUDE "graphics.asm"   ; Put the tiles in the beginning so they stay
                              ; page-aligned (meaning the address' MSB does
                              ; not change and we only calculate the LSB)
 
+Digits
+zero
+  .byte $7E ; |.XXXXXX.|
+  .byte $72 ; |.XXX..X.|
+  .byte $72 ; |.XXX..X.|
+  .byte $72 ; |.XXX..X.|
+  .byte $7E ; |.XXXXXX.|
+one
+  .byte $1C ; |...XXX..|
+  .byte $1C ; |...XXX..|
+  .byte $1C ; |...XXX..|
+  .byte $1C ; |...XXX..|
+  .byte $1C ; |...XXX..|
+two
+  .byte $7E ; |.XXXXXX.|
+  .byte $40 ; |.X......|
+  .byte $7E ; |.XXXXXX.|
+  .byte $0E ; |....XXX.|
+  .byte $7E ; |.XXXXXX.|
+three
+  .byte $7E ; |.XXXXXX.|
+  .byte $4E ; |.X..XXX.|
+  .byte $1C ; |...XXX..|
+  .byte $4E ; |.X..XXX.|
+  .byte $7E ; |.XXXXXX.|
+four
+  .byte $1C ; |...XXX..|
+  .byte $1C ; |...XXX..|
+  .byte $7E ; |.XXXXXX.|
+  .byte $5C ; |.X.XXX..|
+  .byte $7C ; |.XXXXX..|
+five
+  .byte $7E ; |.XXXXXX.|
+  .byte $0E ; |....XXX.|
+  .byte $7E ; |.XXXXXX.|
+  .byte $40 ; |.X......|
+  .byte $7E ; |.XXXXXX.|
+six
+  .byte $7E ; |.XXXXXX.|
+  .byte $4E ; |.X..XXX.|
+  .byte $7E ; |.XXXXXX.|
+  .byte $40 ; |.X......|
+  .byte $7E ; |.XXXXXX.|
+seven
+  .byte $0E ; |....XXX.|
+  .byte $0E ; |....XXX.|
+  .byte $0E ; |....XXX.|
+  .byte $4E ; |.X..XXX.|
+  .byte $7E ; |.XXXXXX.|
+eight
+  .byte $7E ; |.XXXXXX.|
+  .byte $4E ; |.X..XXX.|
+  .byte $7E ; |.XXXXXX.|
+  .byte $72 ; |.XXX..X.|
+  .byte $7E ; |.XXXXXX.|
+nine
+  .byte $7E ; |.XXXXXX.|
+  .byte $02 ; |......X.|
+  .byte $7E ; |.XXXXXX.|
+  .byte $72 ; |.XXX..X.|
+  .byte $7E ; |.XXXXXX.|
+
 VBlankTime64T:               ; Running on PAL mode (enabled by the TV TYPE
-   .byte 44,74               ; switch on the "B•W" position) requires the
+ .byte 44,74               ; switch on the "B•W" position) requires the
 OverscanTime64T:             ; color codes and the timing of VBlank/Overscan
-   .byte 35,65               ; to change. These parameters are listed here:
+ .byte 35,65               ; to change. These parameters are listed here:
 GridColor:                   ; first NTSC, then PAL. Thanks SvOlli!
-   .byte $12,$22
+ .byte $12,$22
 TileColor:
-   .byte $EC,$3C
+ .byte $EC,$3C
+
+
 
 ;;;;;;;;;
 ;; RAM ;;
 ;;;;;;;;;
 
-RowTileBmp1 = $80            ; Each of these points to the address of the
-RowTileBmp2 = $82            ; bitmap that will be drawn on the current/next
-RowTileBmp3 = $84            ; row of the grid, and must be updated before
-RowTileBmp4 = $86            ; the row is drawn
 
-CellTable = $88              ; 16 cells + 13 sentinels = 29 (0x1D) bytes
+CellTable = $80              ; 16 cells + 13 sentinels = 29 (0x1D) bytes
 
-CellCursor = $A5 ;($88+$1D)  ; Loop counter for address of the "current" cell
+CellCursor = $9D ;($80+$1D)  ; Loop counter for address of the "current" cell
+
+; Frame count based RNG, used to add tiles and title screen rainbow
+RandomNumber       = $9E
+
+; Counter to display "animated" tiles (merged / new)
+AnimationCounter   = $9F
+
+; Added to the tile address to produce the merge animation
+AnimationDelta     = $A0
+
+; 6-digit score is stored in BCD (each nibble = 1 digit => 3 bytes)
+ScoreBCD           = $A1
+
+;:: SPACE ($A4, $A5)
+
+; $A6-$A7 have different uses in various kernel routines:
 
 TempVar1 = $A6               ; General use variable
 TempVar2 = $A7               ; General use variable
+
+LineCounter    = $A6         ; Counts lines while drawing the score
+TempDigitBmp   = $A7         ; Stores intermediate part of 6-digit score
 
 GameState = $A8;
 
@@ -187,14 +270,18 @@ OffsetBeingPushed  = $AB     ; Position in cell table of the tile being pushed
 ShiftEndOffset     = $AC     ; Position in which we'll stop processing
 CurrentValue       = $AD     ; Value of that tile
 
-; Frame count based RNG, used to add tiles and title screen rainbow
-RandomNumber       = $AE
+; $B0-$BB will point to the address of the graphic for each
+; digit (6x2 bytes) or tile (4x2 bytes) currently being drawn
 
-; Counter to display "animated" tiles (merged / new)
-AnimationCounter   = $AF
+; FIXME have just one rowtilebmp, maybe TileBmpPtr
 
-; Added to the tile address to produce the merge animation
-AnimationDelta     = $B0
+DigitBmpPtr = $B0
+RowTileBmp1 = $B0            ; Each of these points to the address of the
+RowTileBmp2 = $B2            ; bitmap that will be drawn on the current/next
+RowTileBmp3 = $B4            ; row of the grid, and must be updated before
+RowTileBmp4 = $B6            ; the row is drawn
+
+
 
 
 ;;;;;;;;;;;;;;;
@@ -253,7 +340,11 @@ GridPF1 = $01
 GridPF2Tile  = %10011001 ; Grid has "holes" for numbers
 GridPF2Space = %11111111 ; but is solid between the tiles
 
-AnimationFrames = 11     ; Time limit for merged tile / new tile animations
+PlayerTwoCopiesWide = $02 ; P0 and P1 drawing tiles: 0 1 0 1
+PlayerThreeCopies   = $03 ; P0 and P1 drawing score: 010101
+VerticalDelay       = $01 ; Delays writing of GRP0/GRP1 for 6-digit score
+
+AnimationFrames = 11  ; Time limit for merged tile / new tile animations
 
 JoyP0Up    = %11100000      ; Masks to test SWCHA for joystick movement
 JoyP0Down  = %11010000
@@ -304,13 +395,13 @@ InitialValues:
 ;; PROGRAM SETUP ;;
 ;;;;;;;;;;;;;;;;;;;
 
-; Pre-fill the tile address MSBs, so we only have to
-; figure out the LSBs for each tile
-    lda #>Tiles
-    ldx #7
+; Pre-fill the graphic poitner MSBs, so we only have to
+; figure out the LSBs for each tile or digit
+    lda #>Tiles        ; MSB of tiles/digits page
+    ldx #11            ; 12-byte table (6 digits), zero-based
 FillMsbLoop:
     sta RowTileBmp1,x
-    dex
+    dex                ; Skip to the next MSB
     dex
     bpl FillMsbLoop
 
@@ -515,15 +606,135 @@ WaitForVBlankEndLoop:
 
     sta WSYNC
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; TOP SPACE ABOVE GRID ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; TOP SPACE ABOVE SCORE ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    ldx #52
-SpaceAboveGridLoop:
+    ldx #51
+SpaceAboveLoop:
     sta WSYNC
     dex
-    bne SpaceAboveGridLoop
+    bne SpaceAboveLoop
+    sta WSYNC
+
+;;;;;;;;;;;;;;;;;
+;; SCORE SETUP ;;
+;;;;;;;;;;;;;;;;;
+
+; Score scanline 1:
+; ; configure grid playfield
+;     lda #GridPF0
+;     sta PF0
+;     lda #GridPF1
+;     sta PF1
+;     lda #GridPF2Space        ; Space between rows
+;     sta PF2
+
+; ; point cell cursor to the first data cell
+;     lda #FirstDataCellOffset
+;     sta CellCursor
+
+;     sta WSYNC
+
+
+; Score scanlines 1-2
+; player graphics triplicated and positioned like this: P0 P1 P0 P1 P0 P1
+
+    lda #PlayerThreeCopies   ; (2)
+    sta NUSIZ0               ; (3)
+    sta NUSIZ1               ; (3)
+
+    lda #VerticalDelay       ; (2) ; Needed for precise timing of GRP0/GRP1
+    sta VDELP0               ; (3)
+    sta VDELP1               ; (3)
+
+    REPEAT 10    ; (20=10x2) ; Delay to position right
+        nop
+    REPEND
+    sta RESP0   ; (3)        ; Position P0
+    sta RESP1   ; (3)        ; Position P1
+    sta WSYNC
+
+    lda #$E0                 ; Fine-tune player positions to center on screen
+    sta HMP0
+    lda #$F0
+    sta HMP1
+    sta WSYNC
+    sta HMOVE         ; (3)
+
+; Score scanlines 3-4
+; set the graphic pointers for each score digit
+
+    ldy #2            ; (2)  ; Score byte counter (source)
+    ldx #10           ; (2)  ; Graphic pointer counter (target)
+    clc               ; (2)
+
+ScorePtrLoop:
+    lda ScoreBCD,y    ; (4)
+    and #$0F          ; (2)  ; Lower nibble
+    sta TempVar1      ; (3)
+    asl               ; (2)  ; A = digit x 2
+    asl               ; (2)  ; A = digit x 4
+    adc TempVar1      ; (3)  ; 4.digit + digit = 5.digit
+    adc #<Digits      ; (2)  ; take from the first digit
+    sta DigitBmpPtr,x ; (4)  ; Store lower nibble graphic
+    dex               ; (2)
+    dex               ; (2)
+
+    lda ScoreBCD,y    ; (4)
+    and #$F0          ; (2)
+    lsr               ; (2)
+    lsr               ; (2)
+    lsr               ; (2)
+    lsr               ; (2)
+    sta TempVar1      ; (3)  ; Higher nibble
+    asl               ; (2)  ; A = digit x 2
+    asl               ; (2)  ; A = digit x 4
+    adc TempVar1      ; (3)  ; 4.digit + digit = 5.digit
+    adc #<Digits      ; (2)  ; take from the first digit
+    sta DigitBmpPtr,x ; (4)  ; store higher nibble graphic
+    dex               ; (2)
+    dex               ; (2)
+    dey               ; (2)
+    bpl ScorePtrLoop  ; (2*)
+    sta WSYNC         ;      ; We take less than 2 scanlines, round up
+
+;;;;;;;;;;;
+;; SCORE ;;
+;;;;;;;;;;;
+
+    ldy #4
+    sty LineCounter
+DrawScoreLoop:
+    ldy LineCounter
+    lda (DigitBmpPtr),y
+    sta GRP0
+    sta WSYNC
+    lda (DigitBmpPtr+2),y
+    sta GRP1
+    lda (DigitBmpPtr+4),y
+    sta GRP0
+    lda (DigitBmpPtr+6),y
+    sta TempDigitBmp
+    lda (DigitBmpPtr+8),y
+    tax
+    lda (DigitBmpPtr+10),y
+    tay
+    lda TempDigitBmp
+    sta GRP1
+    stx GRP0
+    sty GRP1
+    sta GRP0
+    dec LineCounter
+    bpl DrawScoreLoop
+
+ScoreCleanup:
+    lda #0
+    sta VDELP0
+    sta VDELP1
+    sta GRP0
+    sta GRP1
+    sta WSYNC
 
 ;;;;;;;;;;;;;;;;
 ;; GRID SETUP ;;
@@ -545,12 +756,12 @@ SpaceAboveGridLoop:
     sta WSYNC
 
 
-; Separator scanlines 2 and 3:
+; Separator scanlines 2-4:
 ; player graphics duplicated and positioned like this: P0 P1 P0 P1
 
-    lda #$02    ; (2)        ; Duplicate the players (with some space between)
-    sta NUSIZ0  ; (3)
-    sta NUSIZ1  ; (3)
+    lda #PlayerTwoCopiesWide ; (2)
+    sta NUSIZ0               ; (3)
+    sta NUSIZ1               ; (3)
 
     REPEAT 9    ; (27 = 9x3) ; Position P0 close to the beginning of 1st tile
         bit $80
@@ -573,7 +784,7 @@ SpaceAboveGridLoop:
 ;; GRID ROW PREPARATION ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Separator scanlines 4-7:
+; Separator scanlines 5-8:
 ; calculate tile address LSB for the 4 tiles, one per scanline
 
 GridRowPreparation:
@@ -616,9 +827,11 @@ MultiplicationDone:
     cpy #8             ; (2)
     bne UpdateTileBitmapAddressLoop ; (2 in branch fail)
 
-; Separator scanline 8:
+; Separator scanline 9
+; change playfield (after the beam draws the last separator one)
+; and initialize counter
 
-    REPEAT 18    ; (54 = 18x3) ; Switch playfield (after the beam draws it)
+    REPEAT 18    ; (54 = 18x3)
         bit $00
     REPEND
 
@@ -690,6 +903,8 @@ DrawBottomSeparatorLoop:
     sta PF0
     sta PF1
     sta PF2
+    sta GRP0
+    sta GRP1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; BOTTOM SPACE BELOW GRID ;;
