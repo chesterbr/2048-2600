@@ -181,8 +181,6 @@ OverscanTime64T:
     .byte 35,65
 GridColor:
     .byte $12,$22
-TileColor:
-    .byte $EC,$3C
 
 ;;;;;;;;;;;;;;;
 ;; CONSTANTS ;;
@@ -304,13 +302,8 @@ OffsetBeingPushed  = $AB     ; Position in cell table of the tile being pushed
 ShiftEndOffset     = $AC     ; Position in which we'll stop processing
 CurrentValue       = $AD     ; Value of that tile
 
-; $B0-$BB will point to the address of the graphic for each
-; digit (6x2 bytes) or tile (4x2 bytes) currently being drawn
-
-
-; Addresses for the digit or tile that will be set
-; (since they are on separate scanlines, we can reuse
-;  the table and keep two labels for clarity)
+; Address of the graphic for for each digit (6x2 bytes)
+; or tile (4x2 bytes) currently being drawn
 
 DigitBmpPtr = $B0
 TileBmpPtr  = $B0
@@ -341,18 +334,11 @@ CleanStack:
     lda #%00000001      ; Playfield (grid) in mirror (symmetrical) mode
     sta CTRLPF
 
-InitialValues:
-    lda #$F0
-    sta HMBL
-    lda #$00
-    sta REFP0
-    sta REFP1
-
 ;;;;;;;;;;;;;;;;;;;
 ;; PROGRAM SETUP ;;
 ;;;;;;;;;;;;;;;;;;;
 
-; Pre-fill the graphic poitner MSBs, so we only have to
+; Pre-fill the graphic pointers' MSBs, so we only have to
 ; figure out the LSBs for each tile or digit
     lda #>Tiles        ; MSB of tiles/digits page
     ldx #11            ; 12-byte table (6 digits), zero-based
@@ -409,10 +395,6 @@ StartNewGame:
 NoColorPALAdjust:
     lda GridColor,x
     sta COLUPF                    ; Show the grid separator
-
-    lda TileColor,x               ; Tiles (players) with fixed color
-    sta COLUP0
-    sta COLUP1
 
     ldx #LastDataCellOffset       ; Last non-sentinel cell offset
     lda #CellEmpty
@@ -895,40 +877,28 @@ RowScanline:
     sta COLUP1            ; (3)
     lda (TileBmpPtr+6),y  ; (5)
     sta TempVar1          ; (3)
-
-    ;sta TempVar1 ; 3
-    nop
     nop                   ; (2)
-
-
+    nop                   ; (2)
     lda (TileBmpPtr),y    ; (5)
     sta GRP0              ; (3)
-    lda (TileBmpPtr+2),y   ; (5)
+    lda (TileBmpPtr+2),y  ; (5)
     sta GRP1              ; (3)
-    lda (TileBmpPtr+4),y   ; (5)
-
+    lda (TileBmpPtr+4),y  ; (5)
     sta GRP0              ; (3)
-    ;.byte $8D,GRP0,0 ; (4) ; sta GRP0 (absolute)
-
     lda TempVar1          ; (3)
     stx COLUP0            ; (3)
     sta GRP1              ; (3)
     tsx                   ; (2)
     stx COLUP1            ; (3)
-
-;    nop                   ; (2)
-
-; Here is the magic that makes A B A B into A B C D: when the beam is between
-; the first copies and the second copies of the players, change the bitmaps:
     dey                   ; (2)
     bpl RowScanline       ; (2*)
     sta WSYNC
 
-; Go to the next row (or finish grid)
+; Go to the next row of tiles (or finish grid)
     lda #0                   ; Disable player (tile) graphics
     sta GRP0
     sta GRP1
-    lda #GridPF2Space        ; and return to the "space" playfield
+    lda #GridPF2Space        ; and return to the "separator" playfield
     sta PF2
 
     inc CellCursor           ; Advance cursor (past the side sentinel)
@@ -1093,7 +1063,7 @@ AdvanceToNext:
     adc TilesLoopDirection
     tax
     cpx ShiftEndOffset
-    beq FinishShift               ; Processed all tiles, shift is done!
+    beq EndShift                  ; Processed all tiles, shift is done!
     jmp CheckIfXIsPushable        ; Check the new candidate
 
 ; Inner loop will push the tile currenlty picked by the outer loop towards
@@ -1144,8 +1114,6 @@ Merge:
     ora CurrentValue         ; Add the "merged" bit (so it doesn't match others)
     sta CurrentValue
     jmp MoveCurrentToNext    ; Move the multiplied cell to the target position
-
-FinishShift:
 
 EndShift:
 

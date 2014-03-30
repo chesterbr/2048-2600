@@ -53,17 +53,11 @@ If you have any questions/comments/rants, feel free to contact me on [Twitter][7
 - All the nice people at the [AtariAge forum][33], for making lots of information available.
 
 ## Pending
-### Known Bugs
-- Very infrequently we have an extra scanline. Seems to happen when lots of tiles are shifted.
+(may or may not be done, I'm thinking about having a life again)
 
-### Things that would be nice
-
-- Time-based multiplayer like [Emil Stolarsky's][6]
-- Turn-based multiplayer (survival-style), one or two players
-- An easter egg (after all, Atari 2600 [pioneered][5] the genre)
-- Different colors for each tile value (this one is **hard**. I've almost
-managed to do it, but I'm missing a few cycles to change the colors quick enough)
-- A better font for the scores? Better tiles?
+- Game Over: detect when no move is possible
+- Multiplayer. Idea: players take turns (or: it's your turn until you don't merge any tiles), each has his own score. Higher score once board is clean wins.
+- Sounds
 
 [1]: https://github.com/gabrielecirulli/2048
 [2]: https://github.com/chesterbr/2048-2600/blob/master/2048.bin?raw=true

@@ -20,6 +20,13 @@
 
 ; Tiles are 8 x 11 to partially compensate for
 ; Atari's pixel ratio (approx. 1.66:1)
+;
+; Actually, the value-colored kernel can't really
+; update the rightmost pixel on the first tile, so
+; if you want to roll your own tiles...
+;
+;       ┌─── ...don't set THIS bit
+;       ↓;
 
 Tiles:
 |        |
