@@ -307,13 +307,13 @@ CurrentValue       = $AD     ; Value of that tile
 ; $B0-$BB will point to the address of the graphic for each
 ; digit (6x2 bytes) or tile (4x2 bytes) currently being drawn
 
-; FIXME have just one rowtilebmp, maybe TileBmpPtr
+
+; Addresses for the digit or tile that will be set
+; (since they are on separate scanlines, we can reuse
+;  the table and keep two labels for clarity)
 
 DigitBmpPtr = $B0
-RowTileBmp1 = $B0            ; Each of these points to the address of the
-RowTileBmp2 = $B2            ; bitmap that will be drawn on the current/next
-RowTileBmp3 = $B4            ; row of the grid, and must be updated before
-RowTileBmp4 = $B6            ; the row is drawn
+TileBmpPtr  = $B0
 
 RowTileColor = $BC ; ($B0 + 6 pointers x 2 bytes)
 
@@ -357,7 +357,7 @@ InitialValues:
     lda #>Tiles        ; MSB of tiles/digits page
     ldx #11            ; 12-byte table (6 digits), zero-based
 FillMsbLoop:
-    sta RowTileBmp1,x
+    sta TileBmpPtr,x
     dex                ; Skip to the next MSB
     dex
     bpl FillMsbLoop
@@ -798,7 +798,7 @@ MultiplyBy11:
     sbc AnimationDelta ; (2)   ; If animating, scroll to the new value
 
 MultiplicationDone:
-    sta RowTileBmp1,y  ; (5)   ; Store LSB (MSB is fixed)
+    sta TileBmpPtr,y   ; (5)   ; Store LSB (MSB is fixed)
 
     iny                ; (2)
     iny                ; (2)
@@ -893,7 +893,7 @@ RowScanline:
     sta WSYNC             ; (3)
     lda RowTileColor+1    ; (3)
     sta COLUP1            ; (3)
-    lda (RowTileBmp4),y   ; (5)
+    lda (TileBmpPtr+6),y  ; (5)
     sta TempVar1          ; (3)
 
     ;sta TempVar1 ; 3
@@ -901,11 +901,11 @@ RowScanline:
     nop                   ; (2)
 
 
-    lda (RowTileBmp1),y   ; (5)
+    lda (TileBmpPtr),y    ; (5)
     sta GRP0              ; (3)
-    lda (RowTileBmp2),y   ; (5)
+    lda (TileBmpPtr+2),y   ; (5)
     sta GRP1              ; (3)
-    lda (RowTileBmp3),y   ; (5)
+    lda (TileBmpPtr+4),y   ; (5)
 
     sta GRP0              ; (3)
     ;.byte $8D,GRP0,0 ; (4) ; sta GRP0 (absolute)
