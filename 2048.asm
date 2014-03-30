@@ -286,7 +286,6 @@ AnimationDelta     = $A0
 ScoreBCD           = $A1
 
 GameType           = $A4     ; OnePlayerGame or TwoPlayerGame
-CurrentPlayer      = $A5     ; 0 or 1 for P0 or P1
 
 ; $A6-$A7 have different uses in various kernel routines:
 
@@ -320,8 +319,10 @@ P0ScoreBCD = $C0             ; 3 bytes
 P1ScoreBCD = $C3             ; 3 bytes
 
 ScoreBeingDrawn = $C6        ; 0 for P0 or 1 for P1
+CurrentPlayer = $C7          ; 0 for P0 or 1 for P1
 
-GameMode = $C7               ; One or Two players, more may be added
+GameMode = $C8               ; One or Two players, more may be added
+DidMerge = $C9               ; Nonzero if a merge happened on the last move
 
 ;;;;;;;;;;;;;;;
 ;; BOOTSTRAP ;;
@@ -429,6 +430,9 @@ LoopResetScore:
     dex
     bpl LoopResetScore
 
+; Reset other variables
+    sta CurrentPlayer
+
 ; Start the game with a random tile
     lda #AddingRandomTile
     sta GameState
@@ -534,17 +538,23 @@ NoRestart:
     bne DoneCounterManagement
     lda #AddingRandomTile         ; Animation done, let's add a tile...
     sta GameState
-    ldx FirstDataCellOffset       ; ...and clear merged bit from tiles
+    ldx FirstDataCellOffset       ; and count points for merged cells...
+    lda #0
+    sta DidMerge                  ; and set this flag if there were any
 CountScoreLoop:
     lda CellTable,x
     cmp #MergedMask
     bmi ClearMergedBit            ; Not merged, just clear the bit
+    sta DidMerge                  ; Flag that we had (at least one) merge
 CountScore:
     and #ClearMergedMask
     asl
     tay                           ; Now Y = offset of tile values table
     sed                           ; We'll work in BCD
 
+    lda CurrentPlayer
+    bne AddScoreToP1
+AddScoreToP0:
     clc
     lda TileValuesBCD-3,y
     adc P0ScoreBCD+2
@@ -557,7 +567,21 @@ CountScore:
     lda #0
     adc P0ScoreBCD
     sta P0ScoreBCD                  ; score "high byte" += carry
+    jmp DoneAddingScore
+AddScoreToP1:
+    clc
+    lda TileValuesBCD-3,y
+    adc P1ScoreBCD+2
+    sta P1ScoreBCD+2                ; score "low byte" += table LSB
 
+    lda TileValuesBCD-4,y
+    adc P1ScoreBCD+1
+    sta P1ScoreBCD+1                ; score "middle byte" += table MSB + carry
+
+    lda #0
+    adc P1ScoreBCD
+    sta P1ScoreBCD                  ; score "high byte" += carry
+DoneAddingScore:
     cld
     lda CellTable,x               ; Restore original value
 ClearMergedBit:
@@ -566,6 +590,15 @@ ClearMergedBit:
     inx
     cpx #LastDataCellOffset+1
     bne CountScoreLoop            ; Go to the next, up to the last tile
+SwapPlayer:
+    lda GameMode
+    cmp #TwoPlayerGame
+    bne DoneCounterManagement     ; Single player always keeps their turn
+    lda DidMerge
+    bne DoneCounterManagement     ; Did merge, player keeps his turn
+    lda CurrentPlayer
+    eor #1                        ; Flip player (0<->1)
+    sta CurrentPlayer
 ResetAnimationCounter:
     lda #AnimationFrames          ; Keep this counter initialized
     sta AnimationCounter          ; for the next animation
