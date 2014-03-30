@@ -176,13 +176,13 @@ TileValuesBCD:
 ; Values that change if we are on PAL mode (TV TYPE switch "B•W" position)
 ; Order: NTSC, PAL. (thanks @SvOlli)
 VBlankTime64T:
-   .byte 44,74
+    .byte 44,74
 OverscanTime64T:
-   .byte 35,65
+    .byte 35,65
 GridColor:
-   .byte $12,$22
+    .byte $12,$22
 TileColor:
-   .byte $EC,$3C
+    .byte $EC,$3C
 
 ;;;;;;;;;;;;;;;
 ;; CONSTANTS ;;
@@ -314,7 +314,7 @@ RowTileBmp2 = $B2            ; bitmap that will be drawn on the current/next
 RowTileBmp3 = $B4            ; row of the grid, and must be updated before
 RowTileBmp4 = $B6            ; the row is drawn
 
-RowTileColor = $B8
+RowTileColor = $BB ; ($B0 + 6 pointers x 2 bytes)
 
 
 ;;;;;;;;;;;;;;;
@@ -508,16 +508,6 @@ AddTileToCell:
 
 EndRandomTile:
     inc RandomNumber          ; Feed the random number generator
-    lda GameState
-    cmp #TitleScreen
-    ; FIXME temp
-    jmp NoRainbow
-    ;bne NoRainbow
-    lda RandomNumber
-    sta COLUP0
-    eor #$FF
-    sta COLUP1
-NoRainbow:
 
 ;;;;;;;;;;;;;;;;;;;;;;
 ;; CONSOLE SWITCHES ;;
@@ -598,7 +588,7 @@ WaitForVBlankEndLoop:
 ;; TOP SPACE ABOVE SCORE ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    ldx #40
+    ldx #36
 SpaceAboveLoop:
     sta WSYNC
     dex
@@ -732,16 +722,6 @@ ScoreCleanup:                ; 1 scanline
     ; lda #VerticalDelay       ; (2) ; Needed for precise timing of GRP0/GRP1
     ; sta VDELP0               ; (3)
 
-    lda #$50
-    sta RowTileColor
-    lda #$30
-    sta RowTileColor+1
-    lda #$10
-    sta RowTileColor+2
-    lda #$70
-    sta RowTileColor+3
-
-
 ; Separator scanline 1:
 ; configure grid playfield
     lda #GridPF0
@@ -783,14 +763,15 @@ ScoreCleanup:                ; 1 scanline
     sta WSYNC
 
 ; Separator scanlines 5-8:
-; set graphic pointers' LSBs to the 4 tiles
+; point graphic pointers' LSBs to the next 4 tiles
 
 GridRowPreparation:
+    lda #
     ldy #0             ; (2)   ; Y = column (*2) counter
 
 UpdateTileBitmapAddressLoop:
-    ldx CellCursor       ; (3) ; A = current grid cell value.
-    lda CellTable,x      ; (4)
+    ldx CellCursor       ; (3)
+    lda CellTable,x      ; (4) ; A = current grid cell value.
     ldx #0
     cmp #MergedMask
     bcc MultiplyBy11
@@ -825,7 +806,44 @@ MultiplicationDone:
     cpy #8             ; (2)
     bne UpdateTileBitmapAddressLoop ; (2 in branch fail)
 
-; Separator scanline 9
+; Separator scanlines 9-10
+; Set tile colors according to their values
+
+    ldx CellCursor
+    lda GameState
+    cmp #TitleScreen
+    bne ColorsFromValues
+ColorsFromRainbow:
+    lda RandomNumber
+    sta RowTileColor
+    adc #40
+    sta RowTileColor+1
+    adc #40
+    sta RowTileColor+2
+    adc #40
+    sta RowTileColor+3
+    sta WSYNC
+    jmp DoneWithColors
+
+ColorsFromValues:
+    ldy #3
+SetColorLoop:
+    dex
+    lda CellTable,x      ; A = current cell value.
+    asl
+    asl
+    asl
+    asl
+    beq StoreColor
+    adc #8               ; If not empty, add some luminance
+StoreColor:
+    sta RowTileColor,y   ; Y = current color table offset
+    dey
+    bpl SetColorLoop
+DoneWithColors:
+    sta WSYNC
+
+; Last separator scanline:
 ; change playfield (after the beam draws the last separator one)
 ; and initialize counter
 
@@ -924,7 +942,7 @@ DrawBottomSeparatorLoop:
 ;; BOTTOM SPACE BELOW GRID ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    ldx #50
+    ldx #46
 SpaceBelowGridLoop:
     sta WSYNC
     dex
