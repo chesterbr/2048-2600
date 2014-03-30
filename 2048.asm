@@ -315,7 +315,7 @@ RowTileBmp2 = $B2            ; bitmap that will be drawn on the current/next
 RowTileBmp3 = $B4            ; row of the grid, and must be updated before
 RowTileBmp4 = $B6            ; the row is drawn
 
-RowTileColor = $BB ; ($B0 + 6 pointers x 2 bytes)
+RowTileColor = $BC ; ($B0 + 6 pointers x 2 bytes)
 
 
 ;;;;;;;;;;;;;;;
@@ -638,6 +638,10 @@ YesScore:
     sta HMP0
     lda #$F0
     sta HMP1
+    lda #ScoreColor
+    sta COLUP0
+    sta COLUP1
+
     sta WSYNC
     sta HMOVE         ; (3)
 
