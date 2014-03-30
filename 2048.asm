@@ -209,8 +209,8 @@ Shifting          = 4  ; => ShowingMerged OR WaitingJoyRelease
 ShowingMerged     = 5  ; => AddingRandomTile
 
 ; Values of GameMode
-SinglePlayer = 0
-MultiPlayer  = 1
+OnePlayerGame = 0
+TwoPlayerGame = 1
 
 ; Some relative positions on the cell table
 ; Notice how we go to last data cell: Top-Left + 3 rows down + 3 columns right
@@ -263,10 +263,6 @@ RightShiftVector = $01     ;  1
 LeftShiftVector  = $FF     ; -1
 DownShiftVector  = $05     ;  5
 UpShiftVector    = $FB     ; -5
-
-; Game types
-OnePlayerGame = 0
-TwoPlayerGame = 1
 
 
 ;;;;;;;;;
@@ -323,8 +319,9 @@ RowTileColor = $BC
 P0ScoreBCD = $C0             ; 3 bytes
 P1ScoreBCD = $C3             ; 3 bytes
 
-ScoreBeingShown = $C6        ; 0 for P0 or 1 for P1
+ScoreBeingDrawn = $C6        ; 0 for P0 or 1 for P1
 
+GameMode = $C7               ; One or Two players, more may be added
 
 ;;;;;;;;;;;;;;;
 ;; BOOTSTRAP ;;
@@ -579,7 +576,7 @@ DoneCounterManagement:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     lda #0                       ; First score to show is P0's
-    sta ScoreBeingShown          ; (P1 will come after the grid)
+    sta ScoreBeingDrawn          ; (P1 will come after the grid)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; REMAINDER OF VBLANK ;;
@@ -625,7 +622,7 @@ YesScore:
     lda #0                   ; No players until we start
     sta GRP0
     sta GRP1
-    lda ScoreBeingShown      ; Copy the proper score to display
+    lda ScoreBeingDrawn      ; Copy the proper score to display
     bne ReadScoreP1
 ReadScoreP0:
     lda P0ScoreBCD
@@ -644,6 +641,7 @@ WriteScore:
 
 ; Score setup scanlines 2-3:
 ; player graphics triplicated and positioned like this: P0 P1 P0 P1 P0 P1
+; also, set their colors
 
     lda #PlayerThreeCopies   ; (2)
     sta NUSIZ0               ; (3)
@@ -664,9 +662,17 @@ WriteScore:
     sta HMP0
     lda #$F0
     sta HMP1
-    lda #ScoreColor
-    sta COLUP0
-    sta COLUP1
+
+    ldx #ScoreColor          ; Will use the score color (i.e., show it)...
+    lda ScoreBeingDrawn
+    beq SetScoreColor        ; if we're drawing the P0 score...
+    lda GameMode
+    cmp #TwoPlayerGame
+    beq SetScoreColor        ; or if it's a mutiiplayer game...
+    ldx #BackgroundColor     ; otherwise, use the background color (hide it)
+SetScoreColor:
+    stx COLUP0
+    stx COLUP1
 
     sta WSYNC
     sta HMOVE         ; (3)
@@ -751,7 +757,7 @@ ScoreCleanup:                ; 1 scanline
     sta GRP1
     sta WSYNC
 
-    lda ScoreBeingShown
+    lda ScoreBeingDrawn
     beq GridSetup           ; If showing P0 score, the grid follows,
     jmp FrameBottomSpace    ; otherwise, we're done with the frame
 
@@ -974,7 +980,7 @@ DrawBottomSeparatorLoop:     ; the remainder will be drawn during P1 score
     dex
     bne DrawBottomSeparatorLoop
 
-    inc ScoreBeingShown      ; Display score for P1 (even if invisible)
+    inc ScoreBeingDrawn      ; Display score for P1 (even if invisible)
     jmp ScoreSetup
 
 
