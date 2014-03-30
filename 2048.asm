@@ -230,6 +230,7 @@ Wall1Repl = 16
 Wall2Repl = 17
 Wall3Repl = 18
 
+ScoreColor  = #40        ; The same for PAL/NTSC, will work fine
 NoGridColor = $00
 
 TileHeight = 11          ; Tiles have 11 scanlines (and are in graphics.asm)
@@ -718,9 +719,6 @@ ScoreCleanup:                ; 1 scanline
 ;; GRID SETUP ;;
 ;;;;;;;;;;;;;;;;
 
-; TEMP organize
-    ; lda #VerticalDelay       ; (2) ; Needed for precise timing of GRP0/GRP1
-    ; sta VDELP0               ; (3)
 
 ; Separator scanline 1:
 ; configure grid playfield
@@ -736,7 +734,6 @@ ScoreCleanup:                ; 1 scanline
     sta CellCursor
 
     sta WSYNC
-
 
 ; Separator scanlines 2-4:
 ; player graphics duplicated and positioned like this: P0 P1 P0 P1
@@ -808,23 +805,41 @@ MultiplicationDone:
 
 ; Separator scanlines 9-10
 ; Set tile colors according to their values
+; (or, in title screen, according to the position)
 
     ldx CellCursor
     lda GameState
     cmp #TitleScreen
-    bne ColorsFromValues
-ColorsFromRainbow:
+    bne ColorsFromValues          ; Not in title screen => tile values
+    cpx #FirstDataCellOffset+19
+    bpl FixedColors               ; Title 4th     row => fixed values
+    cpx #FirstDataCellOffset+12
+    bpl ColorsFromValues          ; Title 3rd     row => tile values (=0)
+ColorsFromRainbow:                ; Title 1st/2nd row => rainbow
     lda RandomNumber
     sta RowTileColor
-    adc #40
+    adc #10
+    adc CellCursor
     sta RowTileColor+1
-    adc #40
+    adc #10
+    adc CellCursor
     sta RowTileColor+2
-    adc #40
+    adc #10
+    adc CellCursor
     sta RowTileColor+3
     sta WSYNC
     jmp DoneWithColors
-
+FixedColors:
+    lda #0
+    sta RowTileColor
+    sta RowTileColor+1
+    lda #ScoreColor
+    sta RowTileColor+2
+    sta RowTileColor+3
+    sta RowTileColor+3   ; Waste a few cycles to get just the timing...
+    sta RESP0            ; ...to join the "Chester" tiles :-)
+    sta WSYNC
+    jmp DoneWithColors
 ColorsFromValues:
     ldy #3
 SetColorLoop:
