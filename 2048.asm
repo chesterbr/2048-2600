@@ -829,9 +829,13 @@ MultiplicationDone:
 ; change playfield (after the beam draws the last separator one)
 ; and initialize counter
 
-    REPEAT 18    ; (54 = 18x3)
-        bit $00
-    REPEND
+    ldx RowTileColor+3        ; (3)  ; Will be used on grid row
+    txs                       ; (2)  ; to save a cycle
+
+    ldy #9                    ; (2)  ; Wait till beam is past the board
+LastSeparatorLineLoop:
+    dey                       ; (2)
+    bne LastSeparatorLineLoop ; (2*) (3 except last)
 
     ldy #TileHeight-1  ; (2)   ; Initialize tile scanline counter
                                ; (goes downwards and is zero-based)
@@ -844,17 +848,6 @@ MultiplicationDone:
 ;;;;;;;;;;;;;;
 ;; GRID ROW ;;
 ;;;;;;;;;;;;;;
-
-   ; sta WSYNC
-   ; REPEAT 12
-   ;   nop
-   ; REPEND
-   ; sta WSYNC
-
-
-    ldx RowTileColor+3
-    txs
-
 
 RowScanline:
     ldx RowTileColor+2    ; (3)
