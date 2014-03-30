@@ -232,7 +232,7 @@ ScoreColor  = #40        ; The same for PAL/NTSC, will work fine
 NoGridColor = $00
 
 TileHeight = 11          ; Tiles have 11 scanlines (and are in graphics.asm)
-GridSeparatorHeight = 10
+GridBottomHeight = 5      ; Doesn't count the ones we use calculating P1's score
 
 GridPF0 = $00            ; Grid sides are always clear, minus last bit
 GridPF1 = $01
@@ -260,16 +260,18 @@ LeftShiftVector  = $FF     ; -1
 DownShiftVector  = $05     ;  5
 UpShiftVector    = $FB     ; -5
 
+; Game types
+OnePlayerGame = 0
+TwoPlayerGame = 1
+
 
 ;;;;;;;;;
 ;; RAM ;;
 ;;;;;;;;;
 
-; The table has 16 cells + 13 sentinels = 29 (0x1D) bytes
-CellTable = $80
+CellTable = $80              ; 29 ($1D) bytes (16 cells + 13 sentinels)
 
-; Loop counter for address of the "current" cell
-CellCursor = $9D ;($80+$1D)  ;
+CellCursor = $9D             ; Table offset of the "current" cell on grid setup
 
 ; Frame count based RNG, used to add tiles and title screen rainbow
 RandomNumber       = $9E
@@ -283,15 +285,16 @@ AnimationDelta     = $A0
 ; 6-digit score is stored in BCD (each nibble = 1 digit => 3 bytes)
 ScoreBCD           = $A1
 
-;:: SPACE ($A4, $A5)
+GameType           = $A4     ; OnePlayerGame or TwoPlayerGame
+CurrentPlayer      = $A5     ; 0 or 1 for P0 or P1
 
 ; $A6-$A7 have different uses in various kernel routines:
 
 TempVar1 = $A6               ; General use variable
 TempVar2 = $A7               ; General use variable
 
-LineCounter    = $A6         ; Counts lines while drawing the score
-TempDigitBmp   = $A7         ; Stores intermediate part of 6-digit score
+LineCounter  = $A6           ; Counts lines while drawing the score
+TempDigitBmp = $A7           ; Stores intermediate part of 6-digit score
 
 GameState = $A8;
 
@@ -305,10 +308,18 @@ CurrentValue       = $AD     ; Value of that tile
 ; Address of the graphic for for each digit (6x2 bytes)
 ; or tile (4x2 bytes) currently being drawn
 
-DigitBmpPtr = $B0
-TileBmpPtr  = $B0
+DigitBmpPtr = $B0            ; 6 bytes
+TileBmpPtr  = $B0            ; 4 bytes (2 wasted)
 
-RowTileColor = $BC ; ($B0 + 6 pointers x 2 bytes)
+; Colors of each tile on the current row (4 bytes)
+RowTileColor = $BC
+
+; Store each player score separatedly and copy
+; from/to ScoreBCD as needed to display, add, etc.
+P0ScoreBCD = $C0             ; 3 bytes
+P1ScoreBCD = $C3             ; 3 bytes
+
+ScoreBeingShown = $C6        ; 0 for P0 or 1 for P1
 
 
 ;;;;;;;;;;;;;;;
@@ -411,9 +422,11 @@ InitCellTableLoop2Inner:
 
 ; Reset score
     lda #0
-    sta ScoreBCD
-    sta ScoreBCD+1
-    sta ScoreBCD+2
+    ldx #5
+LoopResetScore:
+    sta P0ScoreBCD,x
+    dex
+    bpl LoopResetScore
 
 ; Start the game with a random tile
     lda #AddingRandomTile
@@ -533,16 +546,16 @@ CountScore:
 
     clc
     lda TileValuesBCD-3,y
-    adc ScoreBCD+2
-    sta ScoreBCD+2                ; score "low byte" += table LSB
+    adc P0ScoreBCD+2
+    sta P0ScoreBCD+2                ; score "low byte" += table LSB
 
     lda TileValuesBCD-4,y
-    adc ScoreBCD+1
-    sta ScoreBCD+1                ; score "middle byte" += table MSB + carry
+    adc P0ScoreBCD+1
+    sta P0ScoreBCD+1                ; score "middle byte" += table MSB + carry
 
     lda #0
-    adc ScoreBCD
-    sta ScoreBCD                  ; score "high byte" += carry
+    adc P0ScoreBCD
+    sta P0ScoreBCD                  ; score "high byte" += carry
 
     cld
     lda CellTable,x               ; Restore original value
@@ -556,6 +569,13 @@ ResetAnimationCounter:
     lda #AnimationFrames          ; Keep this counter initialized
     sta AnimationCounter          ; for the next animation
 DoneCounterManagement:
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; OTHER FRAME CONFIGURATION ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    lda #0                       ; First score to show is P0's
+    sta ScoreBeingShown          ; (P1 will come after the grid)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; REMAINDER OF VBLANK ;;
@@ -582,7 +602,9 @@ SpaceAboveLoop:
 ;; SCORE SETUP ;;
 ;;;;;;;;;;;;;;;;;
 
+ScoreSetup:
 ; Score setup scanline 1:
+; general configuration
     lda GameState
     cmp #TitleScreen
     bne YesScore             ; No score on title screen
@@ -595,12 +617,30 @@ ScoreSpaceLoop:
     bne ScoreSpaceLoop
     jmp ScoreCleanup
 
+YesScore:
+    lda #0                   ; No players until we start
+    sta GRP0
+    sta GRP1
+    lda ScoreBeingShown      ; Copy the proper score to display
+    bne ReadScoreP1
+ReadScoreP0:
+    lda P0ScoreBCD
+    ldx P0ScoreBCD+1
+    ldy P0ScoreBCD+2
+    jmp WriteScore
+ReadScoreP1:
+    lda P1ScoreBCD
+    ldx P1ScoreBCD+1
+    ldy P1ScoreBCD+2
+WriteScore:
+    sta ScoreBCD
+    stx ScoreBCD+1
+    sty ScoreBCD+2
+    sta WSYNC
 
 ; Score setup scanlines 2-3:
 ; player graphics triplicated and positioned like this: P0 P1 P0 P1 P0 P1
 
-YesScore:
-    sta WSYNC
     lda #PlayerThreeCopies   ; (2)
     sta NUSIZ0               ; (3)
     sta NUSIZ1               ; (3)
@@ -664,6 +704,12 @@ ScorePtrLoop:
     bpl ScorePtrLoop  ; (2*)
     sta WSYNC         ;      ; We take less than 2 scanlines, round up
 
+; We may have been drawing the end of the grid (if it's P1 score)
+    lda #0
+    sta PF0
+    sta PF1
+    sta PF2
+
 ;;;;;;;;;;;
 ;; SCORE ;;
 ;;;;;;;;;;;
@@ -701,11 +747,15 @@ ScoreCleanup:                ; 1 scanline
     sta GRP1
     sta WSYNC
 
+    lda ScoreBeingShown
+    beq GridSetup           ; If showing P0 score, the grid follows,
+    jmp FrameBottomSpace    ; otherwise, we're done with the frame
+
 ;;;;;;;;;;;;;;;;
 ;; GRID SETUP ;;
 ;;;;;;;;;;;;;;;;
 
-
+GridSetup:
 ; Separator scanline 1:
 ; configure grid playfield
     lda #GridPF0
@@ -914,24 +964,22 @@ RowScanline:
     jmp GridRowPreparation
 
 FinishGrid:
-    ldx #GridSeparatorHeight
-DrawBottomSeparatorLoop:
-    sta WSYNC
+    ldx #GridBottomHeight    ; We'll draw a part of the last separator here;
+DrawBottomSeparatorLoop:     ; the remainder will be drawn during P1 score
+    sta WSYNC                ; calculation
     dex
     bne DrawBottomSeparatorLoop
 
-    lda #0                   ; Disable playfield (grid)
-    sta PF0
-    sta PF1
-    sta PF2
-    sta GRP0
-    sta GRP1
+    inc ScoreBeingShown      ; Display score for P1 (even if invisible)
+    jmp ScoreSetup
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; BOTTOM SPACE BELOW GRID ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    ldx #46
+FrameBottomSpace:
+    ldx #38
 SpaceBelowGridLoop:
     sta WSYNC
     dex
