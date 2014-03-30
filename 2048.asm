@@ -208,6 +208,10 @@ WaitingJoyPress   = 3  ; => Shifting
 Shifting          = 4  ; => ShowingMerged OR WaitingJoyRelease
 ShowingMerged     = 5  ; => AddingRandomTile
 
+; Values of GameMode
+SinglePlayer = 0
+MultiPlayer  = 1
+
 ; Some relative positions on the cell table
 ; Notice how we go to last data cell: Top-Left + 3 rows down + 3 columns right
 ; (FYI: add another row down and you'd have the last sentinel)
@@ -228,8 +232,8 @@ Wall1Repl = 16
 Wall2Repl = 17
 Wall3Repl = 18
 
-ScoreColor  = #40        ; The same for PAL/NTSC, will work fine
-NoGridColor = $00
+ScoreColor      = #40    ; The same for PAL/NTSC, will work fine
+BackgroundColor = 0
 
 TileHeight = 11          ; Tiles have 11 scanlines (and are in graphics.asm)
 GridBottomHeight = 5      ; Doesn't count the ones we use calculating P1's score
@@ -375,7 +379,7 @@ InitCellTableLoop1:
     lda #TitleScreen
     sta GameState
 
-    lda #NoGridColor                         ; Hide the grid separator
+    lda #BackgroundColor                     ; Hide the grid separator
     sta COLUPF
 
     ldx #LastDataCellOffset                  ; Print using tiles
@@ -866,7 +870,7 @@ ColorsFromRainbow:                ; Title 1st/2nd row => rainbow
     sta WSYNC
     jmp DoneWithColors
 FixedColors:
-    lda #0
+    lda #BackgroundColor
     sta RowTileColor
     sta RowTileColor+1
     lda #ScoreColor
