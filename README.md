@@ -9,7 +9,7 @@ A port of the [2048][1] game to the [Atari 2600][4].
 
 ![2048 2600 with colors](http://chester.me/img/2014/03/2048-2600.png?refresh=1 "2048 2600 with colors")
 
-## Rules
+## Instructions
 
 ### Single-Player Game
 
@@ -27,13 +27,19 @@ Both players use same board in turns. The current player is the one with the bri
 
 The game ends when there is no possible movement, and the player with the highest score wins.
 
+### PAL
+
+The game supports PAL Atari systems - just change the TV TYPE switch to the B/W position (the COLOR position is NTSC).
+
 ## Running
 
 ### On the Browser
 
 There are (at least) two options to run it without installing any software:
-- [Play it on JSMESS][35] (thanks to [James Friend][34])
-- [Play it on javatari][36] (thanks to javatari creator, [Paulo Augusto Peccin][37])
+
+- ~~[Play it on JSMESS][35] (thanks to [James Friend][34])~~ (that version is quite old and buggy)
+
+- [Play it on javatari][36] (thanks to [javatari][38] creator, [Paulo Augusto Peccin][37])
 
 ### On an Emulator or a Real Atari
 
@@ -99,5 +105,6 @@ If you have any questions/comments/rants, feel free to contact me on [Twitter][7
 [35]: http://jamesfriend.com.au/2600/2048/
 [36]: http://javatari.org/games/2048
 [37]: https://github.com/ppeccin
+[38]: http://javatari.org/
 [40]: https://github.com/unwiredben
 [41]: http://svolli.org/atari2600/
