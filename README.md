@@ -9,6 +9,24 @@ A port of the [2048][1] game to the [Atari 2600][4].
 
 ![2048 2600](http://chester.me/img/2014/03/2048-2600.png "2048 2600")
 
+## Rules
+
+### Single-Player Game
+
+Press GAME RESET (or, on the title screen, the fire button) to start.
+
+Move the joystick to shift the tiles into a direction. Tiles with the same value will join, and you'll earn the joined tile's value in points.
+
+You win by forming the 2048 tile, and lose if there is no movement possible.
+
+### Two-Player Game
+
+Press GAME SELECT to switch between single and two-player game.
+
+Both players use same board in turns. The current player is the one with the bright score, and keeps playing (and scoring) as long as they keep merging. If a shift happens and no tile is merged, it's the other player's turn.
+
+The game ends when there is no possible movement, and the player with the highest score wins.
+
 ## Running
 
 ### On the Browser
@@ -55,9 +73,9 @@ If you have any questions/comments/rants, feel free to contact me on [Twitter][7
 ## Pending
 (may or may not be done, I'm thinking about having a life again)
 
-- Game Over: detect when no move is possible
-- Multiplayer. Idea: players take turns (or: it's your turn until you don't merge any tiles), each has his own score. Higher score once board is clean wins.
 - Sounds
+- Game Over: detect when no move is possible, do something (bad if single player, signal winner if two-player)
+- Detect the 2048 tile and do something special (most likely in single player only)
 
 [1]: https://github.com/gabrielecirulli/2048
 [2]: https://github.com/chesterbr/2048-2600/blob/master/2048.bin?raw=true
