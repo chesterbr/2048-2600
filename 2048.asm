@@ -915,7 +915,7 @@ FixedColors:
     lda #ScoreColor
     sta RowTileColor+2
     sta RowTileColor+3
-    sta RowTileColor+3   ; Waste a few cycles to get just the timing...
+    nop   ; Waste a few cycles to get just the timing...
     sta RESP0            ; ...to join the "Chester" tiles :-)
     sta WSYNC
     jmp DoneWithColors
