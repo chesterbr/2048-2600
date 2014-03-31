@@ -233,7 +233,7 @@ Wall2Repl = 17
 Wall3Repl = 18
 
 ScoreColor         = #$28 ; These color values match in PAL and NTSC,
-InactiveScoreColor = #$02 ; no need to adjust
+InactiveScoreColor = #$04 ; no need to adjust
 BackgroundColor = 0
 
 TileHeight = 11          ; Tiles have 11 scanlines (and are in graphics.asm)
