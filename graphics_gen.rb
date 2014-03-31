@@ -223,29 +223,29 @@ TitleScreenTiles:
 |  XXXX  |
 |        |
 
-!        !
-! X X    !
-!X  XX  X!
+!XX X X X!
 !X  X X X!
-! X X X  !
+!X  XXX X!
+!X  X X X!
+!XX X X X!
 !        !
-!   X   X!
-!  X X X !
-!  XX  X !
-!   XX X !
-!        !
+! XX XXX !
+! X  X X !
+! XX XX  !
+! X  X X !
+! XX X X !
 
-!      X !
-!X   X XX!
-! X X  X !
-!X   X X !
-!XX X   X!
+!X XX XXX!
+!  X   X !
+!X XX  X !
+!   X  X !
+!X XX  X !
 !        !
-! X    X !
-! XX  X  !
-! X X X  !
-!  X  X  !
-!        !
+!XXX XXX !
+!X X X X !
+!XX  XX  !
+!X X X X !
+!XXX X X !
 
 Digits:
 ! XXXXXX !
