@@ -232,7 +232,8 @@ Wall1Repl = 16
 Wall2Repl = 17
 Wall3Repl = 18
 
-ScoreColor      = #40    ; The same for PAL/NTSC, will work fine
+ScoreColor         = #$28 ; These color values match in PAL and NTSC,
+InactiveScoreColor = #$02 ; no need to adjust
 BackgroundColor = 0
 
 TileHeight = 11          ; Tiles have 11 scanlines (and are in graphics.asm)
@@ -711,13 +712,17 @@ WriteScore:
     lda #$F0
     sta HMP1
 
-    ldx #ScoreColor          ; Will use the score color (i.e., show it)...
-    lda ScoreBeingDrawn
-    beq SetScoreColor        ; if we're drawing the P0 score...
-    lda GameMode
-    cmp #TwoPlayerGame
-    beq SetScoreColor        ; or if it's a mutiiplayer game...
-    ldx #BackgroundColor     ; otherwise, use the background color (hide it)
+    ldx #ScoreColor          ; Use score color if score drawn belongs
+    lda ScoreBeingDrawn      ; to the current player
+    cmp CurrentPlayer
+    beq SetScoreColor
+
+    ldx #BackgroundColor     ; Get rid of score if not current and on single
+    lda GameMode             ; player game (in which P0 is always current)
+    cmp #OnePlayerGame
+    beq SetScoreColor
+
+    ldx #InactiveScoreColor  ; Otherwise, this is the inactive player
 SetScoreColor:
     stx COLUP0
     stx COLUP1
@@ -924,15 +929,19 @@ ColorsFromRainbow:                ; Title 1st/2nd row => rainbow
     sta WSYNC
     jmp DoneWithColors
 FixedColors:
+    sta WSYNC
     lda #BackgroundColor
     sta RowTileColor
     sta RowTileColor+1
     lda #ScoreColor
     sta RowTileColor+2
     sta RowTileColor+3
-    nop   ; Waste a few cycles to get just the timing...
-    sta RESP0            ; ...to join the "Chester" tiles :-)
-    sta WSYNC
+    ldx #3
+PositionChesterTilesLoop:
+    nop
+    dex
+    bne PositionChesterTilesLoop
+    sta RESP0
     jmp DoneWithColors
 ColorsFromValues:
     ldy #3
