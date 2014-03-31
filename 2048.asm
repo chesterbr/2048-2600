@@ -267,6 +267,8 @@ LeftShiftVector  = $FF     ; -1
 DownShiftVector  = $05     ;  5
 UpShiftVector    = $FB     ; -5
 
+TurnIndicatorFrames = 60   ; Special display for this # of frames if turn switches
+
 
 ;;;;;;;;;
 ;; RAM ;;
@@ -326,6 +328,8 @@ ScoreBeingDrawn = $C6        ; 0 for P0 or 1 for P1
 CurrentPlayer = $C7          ; 0 for P0 or 1 for P1
 
 LastSWCHB = $C8              ; Avoid multiple detection of console switches
+
+TurnIndicatorCounter = $C9   ; Used to show it's a player's turn
 
 ;;;;;;;;;;;;;;;
 ;; BOOTSTRAP ;;
@@ -615,6 +619,8 @@ SwapPlayer:
     lda CurrentPlayer
     eor #1                        ; Flip player (0<->1)
     sta CurrentPlayer
+    lda #TurnIndicatorFrames      ; Show it's his turn
+    sta TurnIndicatorCounter
 ResetAnimationCounter:
     lda #AnimationFrames          ; Keep this counter initialized
     sta AnimationCounter          ; for the next animation
@@ -711,8 +717,16 @@ WriteScore:
     sta HMP0
     lda #$F0
     sta HMP1
+    sta WSYNC
+    sta HMOVE   ; (3)
 
     ldx #ScoreColor          ; Use score color if score drawn belongs
+    lda TurnIndicatorCounter
+    beq NoTurnAnimation
+    adc #ScoreColor
+    tax
+    dec TurnIndicatorCounter
+NoTurnAnimation:
     lda ScoreBeingDrawn      ; to the current player
     cmp CurrentPlayer
     beq SetScoreColor
@@ -727,8 +741,6 @@ SetScoreColor:
     stx COLUP0
     stx COLUP1
 
-    sta WSYNC
-    sta HMOVE         ; (3)
 
 ; Score setup scanlines 4-5
 ; set the graphic pointers for each score digit
