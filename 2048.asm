@@ -255,8 +255,10 @@ JoyP0Left  = %10110000
 JoyP0Right = %01110000
 JoyMaskP0  = %11110000
 
-ColSwitchMask = %00001000   ; Mask to test SWCHB for TV TYPE switch
-GameResetMask = %00000001   ; Mask to test SWCHB for GAME RESET switch
+ColSwitchMask   = %00001000  ; Mask to test SWCHB for TV TYPE switch
+SelectResetMask = %00000011  ; Mask to test SWCHB for GAME SELECT/RESET switches
+GameSelect      = %00000001  ; Value for GAME SELECT pressed (after mask)
+GameReset       = %00000010  ; Value for GAME RESET  pressed (after mask)
 
 ; Amount to add to move to a direciton in the cell grid, in two's complement
 RightShiftVector = $01     ;  1
@@ -285,7 +287,8 @@ AnimationDelta     = $A0
 ; 6-digit score is stored in BCD (each nibble = 1 digit => 3 bytes)
 ScoreBCD           = $A1
 
-GameType           = $A4     ; OnePlayerGame or TwoPlayerGame
+GameMode = $A4               ; One or Two players
+DidMerge = $A5               ; Nonzero if a merge happened on the last move
 
 ; $A6-$A7 have different uses in various kernel routines:
 
@@ -321,8 +324,7 @@ P1ScoreBCD = $C3             ; 3 bytes
 ScoreBeingDrawn = $C6        ; 0 for P0 or 1 for P1
 CurrentPlayer = $C7          ; 0 for P0 or 1 for P1
 
-GameMode = $C8               ; One or Two players, more may be added
-DidMerge = $C9               ; Nonzero if a merge happened on the last move
+LastSWCHB = $C8              ; Avoid multiple detection of console switches
 
 ;;;;;;;;;;;;;;;
 ;; BOOTSTRAP ;;
@@ -510,14 +512,26 @@ AddTileToCell:
 EndRandomTile:
     inc RandomNumber          ; Feed the random number generator
 
-;;;;;;;;;;;;;;;;;;;;;;
-;; CONSOLE SWITCHES ;;
-;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; SELECT, RESET AND P0 FIRE BUTTON ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    lda SWCHB                 ; GAME RESET restarts the game at any time
-    bit GameResetMask
+    lda SWCHB                 ; We only want the switch presses once
+    and #SelectResetMask      ; (in particular GAME SELECT)
+    cmp LastSWCHB
+    beq NoSwitchChange
+    sta LastSWCHB             ; Store so we know if it's a repeat next time
+
+    cmp #GameSelect           ; GAME SELECT flips single/multiplayer & restarts
+    bne NoSelect
+    lda GameMode
+    eor #1
+    sta GameMode
+    jmp Restart
+NoSelect:
+    cmp #GameReset            ; GAME RESET restarts the game at any time
     beq Restart
-
+NoSwitchChange:
     lda GameState             ; Fire button only restarts at title screen
     cmp #TitleScreen
     bne NoRestart
@@ -526,6 +540,7 @@ EndRandomTile:
 Restart:
     jmp StartNewGame
 NoRestart:
+NoSwitch:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; POST-SHIFT MANAGEMENT (MERGE ANIMATION & SCORE UPDATE) ;;
