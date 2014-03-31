@@ -250,11 +250,11 @@ VerticalDelay       = $01 ; Delays writing of GRP0/GRP1 for 6-digit score
 
 AnimationFrames = 11  ; Time limit for merged tile / new tile animations
 
-JoyP0Up    = %11100000      ; Masks to test SWCHA for joystick movement
-JoyP0Down  = %11010000
-JoyP0Left  = %10110000
-JoyP0Right = %01110000
-JoyMaskP0  = %11110000
+JoyUp    = %11100000      ; Masks to test SWCHA for joystick movement
+JoyDown  = %11010000      ; (we'll shift P1's bits into P0s on his turn, so
+JoyLeft  = %10110000      ;  it's ok to use P0 values)
+JoyRight = %01110000
+JoyMask  = %11110000
 
 ColSwitchMask   = %00001000  ; Mask to test SWCHB for TV TYPE switch
 SelectResetMask = %00000011  ; Mask to test SWCHB for GAME SELECT/RESET switches
@@ -1073,7 +1073,14 @@ NoOverscanPALAdjust:
 
 ; Joystick
     lda SWCHA
-    and #JoyMaskP0           ; Only player 0 bits
+    ldx CurrentPlayer
+    beq VerifyGameStateForJoyCheck
+    asl                      ; If it's P1's turn, put their bits where P0s
+    asl                      ; would be
+    asl
+    asl
+VerifyGameStateForJoyCheck:
+    and #JoyMask           ; Only player 0 bits
 
     ldx GameState            ; We only care for states in which we are waiting
     cpx #WaitingJoyRelease   ; for a joystick press or release
@@ -1084,25 +1091,25 @@ NoOverscanPALAdjust:
 ; If the joystick is in one of these directions, trigger the shift by
 ; setting the ShiftVector and changing mode
 CheckJoyUp:
-    cmp #JoyP0Up
+    cmp #JoyUp
     bne CheckJoyDown
     lda #UpShiftVector
     jmp TriggerShift
 
 CheckJoyDown:
-    cmp #JoyP0Down
+    cmp #JoyDown
     bne CheckJoyLeft
     lda #DownShiftVector
     jmp TriggerShift
 
 CheckJoyLeft:
-    cmp #JoyP0Left
+    cmp #JoyLeft
     bne CheckJoyRight
     lda #LeftShiftVector
     jmp TriggerShift
 
 CheckJoyRight:
-    cmp #JoyP0Right
+    cmp #JoyRight
     bne EndJoyCheck
     lda #RightShiftVector
 
@@ -1113,7 +1120,7 @@ TriggerShift:
     jmp EndJoyCheck
 
 CheckJoyRelease:
-    cmp #JoyMaskP0
+    cmp #JoyMask
     bne EndJoyCheck
 
     lda #WaitingJoyPress       ; Joystick released, can accept shifts again
