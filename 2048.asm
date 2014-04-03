@@ -760,7 +760,7 @@ ScoreSetup:
     bne YesScore             ; No score on title screen
 
 NoScore:
-    ldx #12
+    ldx #13
 ScoreSpaceLoop:
     sta WSYNC
     dex
