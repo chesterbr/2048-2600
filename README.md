@@ -80,7 +80,6 @@ If you have any questions/comments/rants, feel free to contact me on [Twitter][7
 (may or may not be done, I'm thinking about having a life again)
 
 - Sounds
-- Game Over: detect when no move is possible, do something (bad if single player, signal winner if two-player)
 - Detect the 2048 tile and do something special (most likely in single player only)
 
 [1]: https://github.com/gabrielecirulli/2048
