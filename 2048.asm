@@ -531,30 +531,36 @@ EndRandomTile:
 ;; SELECT, RESET AND P0 FIRE BUTTON ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+    ldx GameMode              ; Remember if we were on one or two player mode
     lda SWCHB                 ; We only want the switch presses once
     and #SelectResetMask      ; (in particular GAME SELECT)
     cmp LastSWCHB
     beq NoSwitchChange
     sta LastSWCHB             ; Store so we know if it's a repeat next time
 
-    cmp #GameSelect           ; GAME SELECT flips single/multiplayer & restarts
+    cmp #GameSelect           ; GAME SELECT flips single/multiplayer...
     bne NoSelect
     lda GameMode
     eor #1
     sta GameMode
-    jmp Restart
+    jmp StartNewGame          ; ...and restarts with no further game mode change
 NoSelect:
     cmp #GameReset            ; GAME RESET restarts the game at any time
     beq Restart
 NoSwitchChange:
-    lda INPT4                 ; Fire button pressed?
-    bmi NoRestart             ; Nope, nevermind
+    lda INPT4
+    bpl ButtonPressed         ; P0 Fire button pressed?
+    ldx #1                    ; P1 fire button always starts two-player game
+    lda INPT5                 ; P1 fire button pressed?
+    bmi NoRestart
+ButtonPressed:
     lda GameState
     cmp #TitleScreen
     beq Restart               ; Start game if title screen
     cmp #GameOver             ; or game over
     bne NoRestart
 Restart:
+    stx GameMode
     jmp StartNewGame
 NoRestart:
 
