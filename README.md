@@ -11,9 +11,15 @@ A port of the [2048][1] game to the [Atari 2600][4].
 
 ## Instructions
 
-### Single-Player Game
+### Game Modes
 
-Press GAME RESET (or, on the title screen, the fire button) to start.
+There are two modes: one-player and two-player. You can use GAME SELECT to switch between the two (the selected game will auto-start).
+
+On the title screen, the left joystick button will start a single-player game, and the right joystick button will start a two-player one. When a game is over, the buttons restart the game appropriately.
+
+### One-Player Game
+
+This mode follows the original 2048 as closely as possible.
 
 Move the joystick to shift the tiles into a direction. Tiles with the same value will join, and you'll earn the joined tile's value in points.
 
@@ -21,11 +27,9 @@ You win by forming the 2048 tile, and lose if there is no movement possible.
 
 ### Two-Player Game
 
-Press GAME SELECT to switch between single and two-player game.
-
 Both players use same board in turns. The current player is the one with the bright score, and keeps playing (and scoring) as long as they keep merging. If a shift happens and no tile is merged, it's the other player's turn.
 
-The game ends when there is no possible movement, and the player with the highest score wins.
+The game ends when there is no possible movement, and the player with the highest score wins. Either fire button restarts the two-player game.
 
 ### PAL
 
@@ -57,7 +61,7 @@ All the juicy details are included on [2048.asm][3] (the main source file), and 
 
 Portions contributed and © by their respective authors, see below.
 
-Based on the [original 2048 game][1] by Gabriele Cirulli
+Based on the [original 2048 game][1] by Gabriele Cirulli, which is based on [1024 by Veewo Studio][15] and conceptually similar to [Threes by Asher Vollmer][16].
 
 This software is released under the [MIT license][9], and pull requests are
 welcome. Keep in mind that by submitting a pull request, you are agreeing
@@ -96,6 +100,8 @@ If you have any questions/comments/rants, feel free to contact me on [Twitter][7
 [12]: http://chester.me/archives/2014/03/2048-2600-the-2048-game-for-the-Atari-2600/
 [13]: http://stella.sourceforge.net/
 [14]: http://harmony.atariage.com/Site/Harmony.html
+[15]: https://itunes.apple.com/us/app/1024!/id823499224
+[16]: http://asherv.com/threes/
 [30]: http://github.com/lxfontes
 [31]: http://github.com/dterror
 [32]: http://github.com/bani
