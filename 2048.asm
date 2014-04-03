@@ -206,7 +206,9 @@ AddingRandomTile  = 1  ; => WaitingJoyRelease
 WaitingJoyRelease = 2  ; => WaitingJoyPress
 WaitingJoyPress   = 3  ; => Shifting
 Shifting          = 4  ; => ShowingMerged OR WaitingJoyRelease
-ShowingMerged     = 5  ; => AddingRandomTile
+ShowingMerged     = 5  ; => AddingRandomTile OR GameOverFX
+GameOverFX        = 6  ; => GameOver
+GameOver          = 7  ; => TitleScreen
 
 ; Values of GameMode
 OnePlayerGame = 0
@@ -269,7 +271,6 @@ UpShiftVector    = $FB     ; -5
 
 TurnIndicatorFrames = 60   ; Special display for this # of frames if turn switches
 
-
 ;;;;;;;;;
 ;; RAM ;;
 ;;;;;;;;;
@@ -329,7 +330,14 @@ CurrentPlayer = $C7          ; 0 for P0 or 1 for P1
 
 LastSWCHB = $C8              ; Avoid multiple detection of console switches
 
-TurnIndicatorCounter = $C9   ; Used to show it's a player's turn
+TurnIndicatorCounter = $C9   ; Controls the time spent changing player turn
+
+GameOverEffectCounter = $CA  ; Controls the time spent on game over effect
+
+CurrentBGColor = $CB         ; Ensures invisible score keeps invisible during
+                             ; game over "explosion"
+
+
 
 ;;;;;;;;;;;;;;;
 ;; BOOTSTRAP ;;
@@ -381,6 +389,7 @@ InitCellTableLoop1:
 ;; TITLE SCREEN ;;
 ;;;;;;;;;;;;;;;;;;
 
+ShowTitleScreen:
     lda #TitleScreen
     sta GameState
 
@@ -439,6 +448,7 @@ LoopResetScore:
 
 ; Reset other variables
     sta CurrentPlayer
+    sta CurrentBGColor
 
 ; Start the game with a random tile
     lda #AddingRandomTile
@@ -537,25 +547,27 @@ NoSelect:
     cmp #GameReset            ; GAME RESET restarts the game at any time
     beq Restart
 NoSwitchChange:
-    lda GameState             ; Fire button only restarts at title screen
+    lda INPT4                 ; Fire button pressed?
+    bmi NoRestart             ; Nope, nevermind
+    lda GameState
     cmp #TitleScreen
+    beq Restart               ; Start game if title screen
+    cmp #GameOver             ; or game over
     bne NoRestart
-    lda INPT4
-    bmi NoRestart
 Restart:
     jmp StartNewGame
 NoRestart:
-NoSwitch:
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; POST-SHIFT MANAGEMENT (MERGE ANIMATION & SCORE UPDATE) ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; POST-SHIFT ACTION (MERGE ANIMATION, SCORE UPDATE, GAME OVER) ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     lda GameState
     cmp #ShowingMerged
     bne ResetAnimationCounter     ; No animation: just keep the counter ready
     dec AnimationCounter          ; Animating: decrease counter
     bne DoneCounterManagement
+; Finished animation: update score and add new tile
     lda #AddingRandomTile         ; Animation done, let's add a tile...
     sta GameState
     ldx FirstDataCellOffset       ; and count points for merged cells...
@@ -571,7 +583,6 @@ CountScore:
     asl
     tay                           ; Now Y = offset of tile values table
     sed                           ; We'll work in BCD
-
     lda CurrentPlayer
     bne AddScoreToP1
 AddScoreToP0:
@@ -610,7 +621,8 @@ ClearMergedBit:
     inx
     cpx #LastDataCellOffset+1
     bne CountScoreLoop            ; Go to the next, up to the last tile
-SwapPlayer:
+
+; Change the turn to the other player, if appropriate
     lda GameMode
     cmp #TwoPlayerGame
     bne DoneCounterManagement     ; Single player always keeps their turn
@@ -625,6 +637,82 @@ ResetAnimationCounter:
     lda #AnimationFrames          ; Keep this counter initialized
     sta AnimationCounter          ; for the next animation
 DoneCounterManagement:
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; GAME OVER DETECTION ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    lda GameState
+    cmp #WaitingJoyRelease
+    bne EndGameOverDetection
+
+    ldx #FirstDataCellOffset
+FindAMoveLoop:
+    lda CellTable,x               ; A = current cell value
+    cmp #CellEmpty
+    beq FoundAMove                ; Empty cell => can move
+    inx
+    cmp #CellSentinel
+    beq FindAMoveLoopEnd          ; Sentinel, check next cell
+    cmp CellTable,x               ; X = offset of cell to the right
+    beq FoundAMove                ; Cell matches right neighbour => can merge
+    inx
+    inx
+    inx
+    inx                           ; X = offset of cell to the bottom (1+4=5)
+    cmp CellTable,x
+    beq FoundAMove                ; Cell matches bottom neighbour => can merge
+    dex
+    dex
+    dex
+    dex                           ; X = offset of next cell (1+4-4=1)
+FindAMoveLoopEnd:
+    cpx #LastDataCellOffset+1
+    bne FindAMoveLoop             ; Iterate all tiles
+; If we get here, no move was found => game over
+    lda #GameOverFX               ; Start the game over "explosion"
+    sta GameState
+    ldx #0
+    stx GameOverEffectCounter
+FindWinnerLoop:                   ; Iterate over score byte until we can
+    lda P0ScoreBCD,x              ; define a winner
+    cmp P1ScoreBCD,x
+    beq FindWinnerLoopEnd         ; Can't tell from this byte, move on
+    bcc P1Winner
+P0Winner:
+    lda #0                        ; P0 wins, set their turn (so score is bright)
+    jmp SetTurnToWinner
+P1Winner:
+    lda #1                        ; P1 wins, same thing
+    jmp SetTurnToWinner
+FindWinnerLoopEnd:
+    inx
+    cpx #3
+    bne FindWinnerLoop
+BothAreLosers:
+    lda #99                       ; In a tie, no one will be bright
+SetTurnToWinner:
+    sta CurrentPlayer
+FoundAMove:
+EndGameOverDetection:
+
+;;;;;;;;;;;;;;;;;;;;;;;
+;; GAME OVER EFFECTS ;;
+;;;;;;;;;;;;;;;;;;;;;;;
+    lda GameState
+    cmp #GameOverFX
+    bne EndGameOverEffects
+    lda RandomNumber              ; Flash the background
+    sta COLUBK
+    sta CurrentBGColor
+    inc GameOverEffectCounter     ; Keep on for ~2.3s (+/-0.2 for PAL/NTSC diff)
+    bpl EndGameOverEffects
+    lda #BackgroundColor          ; Now game is *really* over
+    sta COLUBK
+    sta CurrentBGColor
+    lda #GameOver
+    sta GameState
+EndGameOverEffects:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OTHER FRAME CONFIGURATION ;;
@@ -720,18 +808,18 @@ WriteScore:
     sta WSYNC
     sta HMOVE   ; (3)
 
-    ldx #ScoreColor          ; Use score color if score drawn belongs
-    lda TurnIndicatorCounter
+    ldx #ScoreColor          ; Animate score for a few seconds when the
+    lda TurnIndicatorCounter ; turn changes
     beq NoTurnAnimation
     adc #ScoreColor
     tax
     dec TurnIndicatorCounter
 NoTurnAnimation:
-    lda ScoreBeingDrawn      ; to the current player
-    cmp CurrentPlayer
+    lda ScoreBeingDrawn      ; Use score color if score drawn belongs
+    cmp CurrentPlayer        ; to the current player
     beq SetScoreColor
 
-    ldx #BackgroundColor     ; Get rid of score if not current and on single
+    ldx CurrentBGColor       ; Get rid of score if not current and on single
     lda GameMode             ; player game (in which P0 is always current)
     cmp #OnePlayerGame
     beq SetScoreColor
@@ -1058,7 +1146,7 @@ DrawBottomSeparatorLoop:     ; the remainder will be drawn during P1 score
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 FrameBottomSpace:
-    ldx #38
+    ldx #36
 SpaceBelowGridLoop:
     sta WSYNC
     dex
