@@ -676,8 +676,14 @@ FindAMoveLoopEnd:
     cpx #LastDataCellOffset+1
     bne FindAMoveLoop             ; Iterate all tiles
 ; If we get here, no move was found => game over
-    lda #GameOverFX               ; Start the game over "explosion"
+    lda #GameOverFX               ; Start the game over effects...
     sta GameState
+    lda #127                      ; with a centered...
+    sta AUDF0
+    lda #8                        ; explosion-ish...
+    sta AUDC0
+    lda #15                       ; loud sound
+    sta AUDV0
     ldx #0
     stx GameOverEffectCounter
 FindWinnerLoop:                   ; Iterate over score byte until we can
@@ -713,9 +719,11 @@ EndGameOverDetection:
     sta CurrentBGColor
     inc GameOverEffectCounter     ; Keep on for ~2.3s (+/-0.2 for PAL/NTSC diff)
     bpl EndGameOverEffects
-    lda #BackgroundColor          ; Now game is *really* over
+    lda #BackgroundColor          ; Now game is *really* over, cut the effects
     sta COLUBK
     sta CurrentBGColor
+    lda #0
+    sta AUDV0
     lda #GameOver
     sta GameState
 EndGameOverEffects:
