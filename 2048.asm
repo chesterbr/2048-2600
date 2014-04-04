@@ -271,9 +271,15 @@ UpShiftVector    = $FB     ; -5
 
 TurnIndicatorFrames = 60   ; Special display for this # of frames if turn switches
 
+MergeNoise = 4             ; Value of TurnNoise (AUDC0) if a merge happened
+ShiftNoise = 1             ; Value of TurnNoise (AUDC0) if no merge happened
+
 ;;;;;;;;;
 ;; RAM ;;
 ;;;;;;;;;
+
+; Some positions are shared between different coroutines
+; (think of them as local variables)
 
 CellTable = $80              ; 29 ($1D) bytes (16 cells + 13 sentinels)
 
@@ -292,6 +298,7 @@ AnimationDelta     = $A0
 ScoreBCD           = $A1
 
 GameMode = $A4               ; One or Two players
+
 DidMerge = $A5               ; Nonzero if a merge happened on the last move
 
 ; $A6-$A7 have different uses in various kernel routines:
@@ -301,6 +308,8 @@ TempVar2 = $A7               ; General use variable
 
 LineCounter  = $A6           ; Counts lines while drawing the score
 TempDigitBmp = $A7           ; Stores intermediate part of 6-digit score
+
+DidShift = $A6               ; True if a shift happened
 
 GameState = $A8;
 
@@ -571,7 +580,11 @@ NoRestart:
     lda GameState
     cmp #ShowingMerged
     bne ResetAnimationCounter     ; No animation: just keep the counter ready
-    dec AnimationCounter          ; Animating: decrease counter
+    lda AnimationCounter          ; Steadly decrease the shift tone,
+    lsr                           ; giving it a "wall hit" feeling
+    lsr
+    sta AUDV0
+    dec AnimationCounter          ; Decrease counter until animation ends
     bne DoneCounterManagement
 ; Finished animation: update score and add new tile
     lda #AddingRandomTile         ; Animation done, let's add a tile...
@@ -1248,12 +1261,16 @@ EndJoyCheck:
 
     lda GameState
     cmp #Shifting
-    beq SetDirection           ; Have to do this instead of bne EndShift
+    beq StartShift             ; Have to do this instead of bne EndShift
     jmp EndShift               ; because the routine is > 128 bytes!
 
 ; Outer loop will traverse the entire cell map in the *opposite* order of the
 ; movement, that is, from the beginning for right/up and from end for left/down,
 ; so they stack and merge as expected. Let's setup these parameters
+
+StartShift:
+    lda #0                     ; So far, no merges happened
+    sta DidMerge
 
 SetDirection:
     lda ShiftVector
@@ -1299,8 +1316,21 @@ AdvanceToNext:
     adc TilesLoopDirection
     tax
     cpx ShiftEndOffset
-    beq EndShift                  ; Processed all tiles, shift is done!
+    beq TurnNoiseSetup            ; Processed all tiles, shift is done!
     jmp CheckIfXIsPushable        ; Check the new candidate
+TurnNoiseSetup:
+    lda GameState
+    cmp #WaitingJoyRelease
+    beq EndShift                  ; No shift => no noise
+    ldx #ShiftNoise
+    lda DidMerge
+    beq StartNoise                ; Shift with no merge => shift noise
+    ldx #MergeNoise               ; Shift & merge => merge noise
+StartNoise:
+    stx AUDC0
+    lda #90
+    sta AUDF0
+    jmp EndShift
 
 ; Inner loop will push the tile currenlty picked by the outer loop towards
 ; the desired direction, until hitting an unmergeable tile
@@ -1322,7 +1352,7 @@ PushCurrentTile:                  ; Inner loop begins here
 
 MoveCurrentToNext:
     lda #ShowingMerged       ; If we move at least once, we can show merged
-    sta GameState            ; animations (if any), which will add the new tile
+    sta GameState            ; animations (if any)
 
     lda CurrentValue
     sta CellTable,y          ; Set next cell to current value
@@ -1349,6 +1379,7 @@ Merge:
     lda #MergedMask
     ora CurrentValue         ; Add the "merged" bit (so it doesn't match others)
     sta CurrentValue
+    sta DidMerge             ; Signal the merge
     jmp MoveCurrentToNext    ; Move the multiplied cell to the target position
 
 EndShift:
