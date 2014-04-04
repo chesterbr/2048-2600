@@ -81,10 +81,7 @@ If you have any questions/comments/rants, feel free to contact me on [Twitter][7
 - All the nice people at the [AtariAge forum][33], for making lots of information available.
 
 ## Pending
-(may or may not be done, I'm thinking about having a life again)
-
-- Sounds
-- Detect the 2048 tile and do something special (most likely in single player only)
+- High Score
 
 [1]: https://github.com/gabrielecirulli/2048
 [2]: https://github.com/chesterbr/2048-2600/blob/master/2048.bin?raw=true
