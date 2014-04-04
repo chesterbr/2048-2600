@@ -179,8 +179,6 @@ VBlankTime64T:
     .byte 44,74
 OverscanTime64T:
     .byte 35,65
-GridColor:
-    .byte $12,$22
 
 ;;;;;;;;;;;;;;;
 ;; CONSTANTS ;;
@@ -234,9 +232,11 @@ Wall1Repl = 16
 Wall2Repl = 17
 Wall3Repl = 18
 
-ScoreColor         = #$28 ; These color values match in PAL and NTSC,
-InactiveScoreColor = #$04 ; no need to adjust
-BackgroundColor = 0
+ScoreColor         = $28 ; Colors were chosen to get equal or equally nice
+InactiveScoreColor = $04 ; on both PAL and NTSC, avoiding adjust branches
+GridColor          = $04
+BackgroundColor    = $00
+
 
 TileHeight = 11          ; Tiles have 11 scanlines (and are in graphics.asm)
 GridBottomHeight = 5      ; Doesn't count the ones we use calculating P1's score
@@ -346,7 +346,8 @@ GameOverEffectCounter = $CA  ; Controls the time spent on game over effect
 CurrentBGColor = $CB         ; Ensures invisible score keeps invisible during
                              ; game over "explosion"
 
-
+DidMerge2048 = $CC           ; 0 if no 2048 was reached; 11 (Cell2048) if we did
+Party2048Counter = $CD       ; 2048 effects counter (and ensures they play only once)
 
 ;;;;;;;;;;;;;;;
 ;; BOOTSTRAP ;;
@@ -425,13 +426,7 @@ TitleTiles:
 ;;;;;;;;;;;;;;
 
 StartNewGame:
-    ldx #$00                     ; Colors change between NTSC and PAL
-    lda #ColSwitchMask
-    bit SWCHB
-    bne NoColorPALAdjust
-    inx
-NoColorPALAdjust:
-    lda GridColor,x
+    lda GridColor
     sta COLUPF                    ; Show the grid separator
 
     ldx #LastDataCellOffset       ; Last non-sentinel cell offset
@@ -458,6 +453,7 @@ LoopResetScore:
 ; Reset other variables
     sta CurrentPlayer
     sta CurrentBGColor
+    sta Party2048Counter
 
 ; Start the game with a random tile
     lda #AddingRandomTile
@@ -597,8 +593,11 @@ CountScoreLoop:
     cmp #MergedMask
     bmi ClearMergedBit            ; Not merged, just clear the bit
     sta DidMerge                  ; Flag that we had (at least one) merge
+    and #ClearMergedMask          ; and get the value without the merge bit
+    cmp #Cell2048
+    bne CountScore
+    sta DidMerge2048              ; If we merged a 2048, flag it
 CountScore:
-    and #ClearMergedMask
     asl
     tay                           ; Now Y = offset of tile values table
     sed                           ; We'll work in BCD
@@ -656,6 +655,14 @@ ResetAnimationCounter:
     lda #AnimationFrames          ; Keep this counter initialized
     sta AnimationCounter          ; for the next animation
 DoneCounterManagement:
+; Reached first 2048? Let's party!
+    lda DidMerge2048
+    beq NoParty                   ; No 2048
+    lda Party2048Counter
+    bne NoParty                   ; Already had a party
+    inc Party2048Counter          ; Let's party!
+NoParty:
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; GAME OVER DETECTION ;;
@@ -740,6 +747,29 @@ EndGameOverDetection:
     lda #GameOver
     sta GameState
 EndGameOverEffects:
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; 2048 "PARTY" EFFECTS ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    lda Party2048Counter
+    beq DonePartyCheck           ; No party yet
+    bmi DonePartyCheck           ; Party is over
+    lda #04                      ; Party!
+    sta AUDC1
+    lda Party2048Counter
+    sta AUDF1
+    sta COLUPF
+    lda #10
+    sta AUDV1
+    inc Party2048Counter
+    bpl DonePartyCheck
+    lda #0                       ; End of party
+    sta AUDV1
+    lda GridColor
+    sta COLUPF
+DonePartyCheck:
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OTHER FRAME CONFIGURATION ;;
