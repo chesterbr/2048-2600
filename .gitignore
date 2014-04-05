@@ -1,7 +1,6 @@
 # Local DASM
 dasm*
 *.h
-2048.stella
 
 # Mac stuff
 .DS_Store
@@ -11,10 +10,13 @@ dasm*
 # Icon must ends with two \r.
 Icon
 
-
 # Thumbnails
 ._*
 
 # Files that might appear on external disk
 .Spotlight-V100
 .Trashes
+
+# Symbol and other intermediate files
+# (minus the final .bin, which I keep versioned)
+*.sym
