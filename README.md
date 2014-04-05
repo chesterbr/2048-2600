@@ -13,7 +13,7 @@ A port of the [2048][1] game to the [Atari 2600][4].
 
 ### Game Modes
 
-There are two modes: one-player and two-player. You can use GAME SELECT to switch between the two (the selected game will auto-start).
+There are two modes: one-player and two-player. You can use GAME SELECT to switch between them (the selected game will auto-start).
 
 On the title screen, the left joystick button will start a single-player game, and the right joystick button will start a two-player one. When a game is over, the buttons restart the game appropriately.
 
@@ -21,9 +21,11 @@ On the title screen, the left joystick button will start a single-player game, a
 
 This mode follows the original 2048 as closely as possible.
 
-Move the joystick to shift the tiles into a direction. Tiles with the same value will join, and you'll earn the joined tile's value in points.
+Move the joystick to shift the tiles into a direction. Tiles with the same value will join, and you'll earn the joined tile's value in points (shown above the board).
 
-You win by forming the 2048 tile, and lose if there is no movement possible.
+You win by forming the 2048 tile. The game continues until there is no movement possible, and the current high score will be displayed below the board.
+
+The high score will be erased if you turn the console/emulator off (it's an Atari game, after all) or if you start a two-player game.
 
 ### Two-Player Game
 
@@ -79,9 +81,6 @@ If you have any questions/comments/rants, feel free to contact me on [Twitter][7
 
 - [Lucas][30], [Diogo][31], and [Bani][32], for support and suggestions.
 - All the nice people at the [AtariAge forum][33], for making lots of information available.
-
-## Pending
-- High Score
 
 [1]: https://github.com/gabrielecirulli/2048
 [2]: https://github.com/chesterbr/2048-2600/blob/master/2048.bin?raw=true

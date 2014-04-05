@@ -14,8 +14,13 @@
 ; Building
 ; ---------
 ;
-; Build it with DASM (http://dasm-dillon.sourceforge.net/)
+; You can build with DASM (http://dasm-dillon.sourceforge.net/), e.g.:
+;
 ;   dasm 2048.asm -o2048.bin -f3
+;
+; However, you'll likely want to run graphics_gen.rb before. I've included
+; my build script (build.sh), under the express condition that you don't
+; mock my lame bash abilities :-P
 
 ; Cell Tables
 ; -----------
@@ -331,6 +336,7 @@ RowTileColor = $BC
 
 ; Store each player score separatedly and copy
 ; from/to ScoreBCD as needed to display, add, etc.
+; Note: P1 score will store (and show) the high-score in single-player games
 P0ScoreBCD = $C0             ; 3 bytes
 P1ScoreBCD = $C3             ; 3 bytes
 
@@ -444,7 +450,11 @@ InitCellTableLoop2Inner:
 
 ; Reset score
     lda #0
-    ldx #5
+    ldx #5                        ; Reset both scores if on two-player game
+    ldy GameMode
+    cpy #TwoPlayerGame
+    beq LoopResetScore
+    ldx #2                        ; Only reset P0 if single-player (P1=record)
 LoopResetScore:
     sta P0ScoreBCD,x
     dex
@@ -706,21 +716,34 @@ FindAMoveLoopEnd:
     sta AUDV0
     ldx #0
     stx GameOverEffectCounter
-FindWinnerLoop:                   ; Iterate over score byte until we can
-    lda P0ScoreBCD,x              ; define a winner
+; For two-player mode, find the winner and make it current (=highlighted)
+; For one-player mode, just update the high score (P1 Score)
+    ldy GameMode
+FindHigherScoreLoop:              ; Iterate over score byte until we can
+    lda P0ScoreBCD,x              ; define whether P0 or P1 is higher
     cmp P1ScoreBCD,x
-    beq FindWinnerLoopEnd         ; Can't tell from this byte, move on
-    bcc P1Winner
-P0Winner:
-    lda #0                        ; P0 wins, set their turn (so score is bright)
+    beq ContinueFindHigherScore   ; Can't tell from this byte, keep looping
+    bcc P1Higher
+P0Higher:
+    lda #0
+    cpy #TwoPlayerGame
+    beq SetTurnToWinner           ; Two-player game: P0 wins, make it current.
+    ldx P0ScoreBCD                ; One-player game: we have a new record,
+    stx P1ScoreBCD                ; copy it to the P1 (high score)
+    ldx P0ScoreBCD+1
+    stx P1ScoreBCD+1
+    ldx P0ScoreBCD+2
+    stx P1ScoreBCD+2
+    jmp EndGameOverDetection
+P1Higher:
+    cpy #OnePlayerGame
+    beq EndGameOverEffects        ; One-player game: no new record, we're done
+    lda #1                        ; Two-Player game: P1 wins, make it current.
     jmp SetTurnToWinner
-P1Winner:
-    lda #1                        ; P1 wins, same thing
-    jmp SetTurnToWinner
-FindWinnerLoopEnd:
+ContinueFindHigherScore:
     inx
     cpx #3
-    bne FindWinnerLoop
+    bne FindHigherScoreLoop
 BothAreLosers:
     lda #99                       ; In a tie, no one will be bright
 SetTurnToWinner:
@@ -872,16 +895,21 @@ WriteScore:
     tax
     dec TurnIndicatorCounter
 NoTurnAnimation:
-    lda ScoreBeingDrawn      ; Use score color if score drawn belongs
-    cmp CurrentPlayer        ; to the current player
+    lda ScoreBeingDrawn      ; If score drawn belongs to the current player,
+    cmp CurrentPlayer        ; it is always shown as active
     beq SetScoreColor
+
+    lda GameState            ; If game is over, always show both scores
+    cmp #GameOver            ; (because P1 is the high score)
+    beq ShowAsInactive
 
     ldx CurrentBGColor       ; Get rid of score if not current and on single
-    lda GameMode             ; player game (in which P0 is always current)
-    cmp #OnePlayerGame
+    lda GameMode             ; player game (in which P0 is always current),
+    cmp #OnePlayerGame       ; otherwise show as inactive
     beq SetScoreColor
 
-    ldx #InactiveScoreColor  ; Otherwise, this is the inactive player
+ShowAsInactive:
+    ldx #InactiveScoreColor
 SetScoreColor:
     stx COLUP0
     stx COLUP1
