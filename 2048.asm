@@ -152,7 +152,7 @@
 
     PROCESSOR 6502
     INCLUDE "vcs.h"
-    ORG $F800                ; 2K cart
+    ORG $F800          ; It's a 2K cart, meaning it has 2048 bytes! #mindblow
 
 ;;;;;;;;;;;;;;;;;
 ;; DATA TABLES ;;
