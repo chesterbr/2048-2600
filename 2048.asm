@@ -463,6 +463,7 @@ LoopResetScore:
 ; Reset other variables
     sta CurrentPlayer
     sta CurrentBGColor
+    sta DidMerge2048
     sta Party2048Counter
 
 ; Start the game with a random tile
@@ -598,6 +599,7 @@ NoRestart:
     ldx FirstDataCellOffset       ; and count points for merged cells...
     lda #0
     sta DidMerge                  ; and set this flag if there were any
+    sta DidMerge2048              ; and this to flag if any was a 2048
 CountScoreLoop:
     lda CellTable,x
     cmp #MergedMask
