@@ -5,9 +5,9 @@ A port of the [2048][1] game to the [Atari 2600][4].
 
 (because there aren't enough [versions][11] of this game :laughing:)
 
-## Screenshot
+## Cartridge Art (click to zoom) and Screenshot
 
-![(simulated - 236-0873 was Bozo's phone number in Brazil)](http://chester.me/img/2014/03/2048-2600.png?refresh=3 "(simulated - 236-0873 was Bozo's phone number in Brazil)")
+-> [![Art by Jenn Harrison](https://raw.githubusercontent.com/chesterbr/2048-2600/master/cart-small.jpg)](https://raw.githubusercontent.com/chesterbr/2048-2600/master/cart-main.jpg) &nbsp; &nbsp; ![(simulated - 236-0873 was Bozo's phone number in Brazil)](http://chester.me/img/2014/03/2048-2600.png?refresh=3 "(simulated - 236-0873 was Bozo's phone number in Brazil)") <-
 
 ## Instructions
 
@@ -63,6 +63,8 @@ All the juicy details are included on [2048.asm][3] (the main source file), and 
 
 Portions contributed and © by their respective authors, see below.
 
+Cartridge Art © 2014 by Jenn Harrison
+
 Based on the [original 2048 game][1] by Gabriele Cirulli, which is based on [1024 by Veewo Studio][15] and conceptually similar to [Threes by Asher Vollmer][16].
 
 This software is released under the [MIT license][9], and pull requests are
@@ -70,12 +72,13 @@ welcome. Keep in mind that by submitting a pull request, you are agreeing
 to the licensing terms and licensing your contribution under them (without
 undermining any of your other rights).
 
-If you have any questions/comments/rants, feel free to contact me on [Twitter][7], on my [blog][8] or simply [write an e-mail][10]!
+If you have any questions/comments/rants, feel free to contact me on [Twitter][7], on my [blog][8], or simply [write an e-mail][10]!
 
 ## Contributors
 
 - [Ben Combee][40] - Fixed the bug that prevented the last tile from being picked;
 - [SvOlli (Sven Oliver Moll)][41] - Implemented PAL mode using the TV TYPE switch.
+- [Jenn Harrison][42] - Cartridge Art
 
 ## Special Thanks
 
@@ -109,3 +112,4 @@ If you have any questions/comments/rants, feel free to contact me on [Twitter][7
 [38]: http://javatari.org/
 [40]: https://github.com/unwiredben
 [41]: http://svolli.org/atari2600/
+[42]: https://twitter.com/jennofour
