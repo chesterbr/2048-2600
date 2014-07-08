@@ -7,7 +7,7 @@ A port of the [2048][1] game to the [Atari 2600][4].
 
 ## Cartridge Art (click to zoom) and Screenshot
 
--> [![Art by Jenn Harrison](https://raw.githubusercontent.com/chesterbr/2048-2600/master/cart-small.jpg)](https://raw.githubusercontent.com/chesterbr/2048-2600/master/cart-main.jpg) &nbsp; &nbsp; ![(simulated - 236-0873 was Bozo's phone number in Brazil)](http://chester.me/img/2014/03/2048-2600.png?refresh=3 "(simulated - 236-0873 was Bozo's phone number in Brazil)") <-
+[![Art by Jenn Harrison](https://raw.githubusercontent.com/chesterbr/2048-2600/master/cart-small.jpg)](https://raw.githubusercontent.com/chesterbr/2048-2600/master/cart-main.jpg) &nbsp; &nbsp; ![(simulated - 236-0873 was Bozo's phone number in Brazil)](http://chester.me/img/2014/03/2048-2600.png?refresh=3 "(simulated - 236-0873 was Bozo's phone number in Brazil)")
 
 ## Instructions
 
