@@ -15,7 +15,7 @@ A port of the [2048][1] game to the [Atari 2600][4].
 
 There are two modes: one-player and two-player. You can use GAME SELECT to switch between them (the selected game will auto-start).
 
-On the title screen, the left joystick button will start a single-player game, and the right joystick button will start a two-player one. When a game is over, the buttons restart the game appropriately.
+On the title screen, the left joystick button will start a single-player game, and the right joystick button will start a two-player game. When a game is over, the buttons restart the game appropriately.
 
 ### One-Player Game
 
