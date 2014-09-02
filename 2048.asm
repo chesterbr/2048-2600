@@ -595,8 +595,8 @@ NoRestart:
     bne DoneCounterManagement
 ; Finished animation: update score and add new tile
     lda #AddingRandomTile         ; Animation done, let's add a tile...
-    sta GameState
-    ldx FirstDataCellOffset       ; and count points for merged cells...
+    sta GameState                 ; and count points for merged cells...
+    ldx FirstDataCellOffset       ; (SEE NOTE 1)
     lda #0
     sta DidMerge                  ; and set this flag if there were any
     sta DidMerge2048              ; and this to flag if any was a 2048
@@ -1462,6 +1462,25 @@ WaitForOverscanEndLoop:
     .WORD Initialize
 
     END
+
+; NOTE 1:
+;
+; As pointed out by http://github.com/david-schmidt in Issue #8
+; (https://github.com/chesterbr/2048-2600/issues/8), this line should read:
+;
+;    ldx #FirstDataCellOffset
+;
+; The way it is it will instead read the contents of CXM1FB, a collision
+; latch whose active bits will be always 0, and I it seems I got lucky that:
+;
+; a) The inactive ones are also 0 (although this is not documented), making the
+;    score count start from the wall instead of the first data cell.
+; b) Walls don't score points.
+;
+; which makes the score count work depsite of the bug. I will not fix it
+; to avoid generating a deviant binary from the one that is already on the
+; wild (including physical carts from GDG)
+;
 
 ; The MIT License (MIT)
 
