@@ -41,11 +41,7 @@ The game supports PAL Atari systems - just change the TV TYPE switch to the B/W 
 
 ### On the Browser
 
-There are (at least) two options to run it without installing any software:
-
-- ~~[Play it on JSMESS][35] (thanks to [James Friend][34])~~ (that version is quite old and buggy)
-
-- [Play it on javatari][36] (thanks to [javatari][38] creator, [Paulo Augusto Peccin][37])
+[Click here to play](http://javatari.org/?ROM=https://github.com/chesterbr/2048-2600/raw/master/2048.bin) on your browser, thanks to [Paulo Augusto Peccin][37]'s [Javatari.js](https://github.com/ppeccin/javatari.js).
 
 ### On an Emulator or a Real Atari
 
