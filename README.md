@@ -40,7 +40,7 @@ The game supports PAL Atari systems - just change the TV TYPE switch to the B/W 
 
 ### On the Browser
 
-[Click here to play](http://javatari.org/?ROM=https://github.com/chesterbr/2048-2600/raw/master/2048.bin) on your browser, thanks to [Paulo Augusto Peccin][37]'s [Javatari.js](https://github.com/ppeccin/javatari.js).
+[Click here to play](http://javatari.org/?ROM=https://github.com/chesterbr/2048-2600/raw/main/2048.bin) on your browser, thanks to [Paulo Augusto Peccin][37]'s [Javatari.js](https://github.com/ppeccin/javatari.js).
 
 ### On an Emulator or a Real Atari
 
@@ -81,14 +81,14 @@ If you have any questions/comments/rants, feel free to contact me on [Twitter][7
 - All the nice people at the [AtariAge forum][33], for making lots of information available.
 
 [1]: https://github.com/gabrielecirulli/2048
-[2]: https://github.com/chesterbr/2048-2600/blob/master/2048.bin?raw=true
-[3]: https://github.com/chesterbr/2048-2600/blob/master/2048.asm
+[2]: https://github.com/chesterbr/2048-2600/blob/main/2048.bin?raw=true
+[3]: https://github.com/chesterbr/2048-2600/blob/main/2048.asm
 [4]: http://atariage.com/2600/history.html
 [5]: https://www.youtube.com/watch?v=Pw02kibMs3E
 [6]: http://emils.github.io/2048-multiplayer/
 [7]: http://twitter.com/chesterbr
 [8]: http://chester.me
-[9]: https://github.com/gabrielecirulli/2048/blob/master/LICENSE.txt
+[9]: https://github.com/gabrielecirulli/2048/blob/main/LICENSE.txt
 [10]: mailto:cd@pobox.com?subject=2048+2600
 [11]: http://phenomist.wordpress.com/2048-variants/
 [12]: http://chester.me/archives/2014/03/2048-2600-the-2048-game-for-the-Atari-2600/
